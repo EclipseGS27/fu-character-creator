@@ -1,0 +1,23 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version matches tag
+        run: |
+          v=$(jq -r .version module.json)
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "module.json version $v does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+      - name: Zip module
+        run: zip -r fu-character-creator.zip . -x '.git/*' '.github/*'
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            fu-character-creator.zip
+            module.json
+          body: "Install in Foundry with the manifest URL: https://github.com/EclipseGS27/fu-character-creator/releases/latest/download/module.json"
