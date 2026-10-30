@@ -1,7 +1,9 @@
 name: Release
+# Publishes a release whenever module.json on main has a version that has no release yet.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -9,14 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check version matches tag
+      - name: Read version
+        id: v
+        run: echo "version=$(jq -r .version module.json)" >> "$GITHUB_OUTPUT"
+      - name: Skip if already released
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          v=$(jq -r .version module.json)
-          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "module.json version $v does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+          if gh release view "v${{ steps.v.outputs.version }}" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
       - name: Zip module
+        if: steps.check.outputs.exists == 'false'
         run: zip -r fu-character-creator.zip . -x '.git/*' '.github/*'
       - uses: softprops/action-gh-release@v2
+        if: steps.check.outputs.exists == 'false'
         with:
+          tag_name: v${{ steps.v.outputs.version }}
+          name: v${{ steps.v.outputs.version }}
+          target_commitish: ${{ github.sha }}
           files: |
             fu-character-creator.zip
             module.json
