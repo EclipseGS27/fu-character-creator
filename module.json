@@ -1,0 +1,37 @@
+{
+  "id": "fu-character-creator",
+  "title": "Fabula Ultima Character Creator",
+  "description": "A step-by-step character creation wizard for the Project FU system. Reads classes, Skills, spells, class features and equipment straight from your compendiums.",
+  "version": "1.2.2",
+  "authors": [
+    {
+      "name": "George Sowidan"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "projectfu",
+        "type": "system",
+        "compatibility": {
+          "minimum": "4.14.0"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.mjs"
+  ],
+  "styles": [
+    "styles/creator.css"
+  ],
+  "languages": [],
+  "url": "https://github.com/EclipseGS27/fu-character-creator",
+  "manifest": "https://github.com/EclipseGS27/fu-character-creator/releases/latest/download/module.json",
+  "download": "https://github.com/EclipseGS27/fu-character-creator/releases/download/v1.2.2/fu-character-creator.zip",
+  "bugs": "https://github.com/EclipseGS27/fu-character-creator/issues"
+}

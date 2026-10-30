@@ -1,0 +1,1152 @@
+/* Fabula Ultima Character Creator. Dark by default, light when Foundry's theme is light. */
+.fucc {
+	--fucc-bg: #1b1e2a;
+	--fucc-panel: #232838;
+	--fucc-panel-2: #2a3044;
+	--fucc-line: #3a4158;
+	--fucc-text: #e9ebf3;
+	--fucc-muted: #a2a9bf;
+	--fucc-accent: #e0a93a;
+	--fucc-accent-ink: #231600;
+	--fucc-good: #4fc48c;
+	--fucc-bad: #ef6a6a;
+	min-width: 760px;
+	min-height: 520px;
+}
+.fucc.theme-light,
+.theme-light .fucc {
+	--fucc-bg: #f6f3ec;
+	--fucc-panel: #ffffff;
+	--fucc-panel-2: #efeadf;
+	--fucc-line: #d8d0c0;
+	--fucc-text: #22252e;
+	--fucc-muted: #6a6f7d;
+	--fucc-accent: #b27512;
+	--fucc-accent-ink: #ffffff;
+	--fucc-good: #1f8a57;
+	--fucc-bad: #c23b3b;
+}
+.fucc .window-content {
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--fucc-bg);
+	color: var(--fucc-text);
+	overflow: hidden;
+}
+.fucc button {
+	font-family: inherit;
+}
+.fucc .fucc-loading,
+.fucc .fucc-empty {
+	padding: 40px;
+	text-align: center;
+	color: var(--fucc-muted);
+}
+.fucc .fucc-muted {
+	color: var(--fucc-muted);
+}
+.fucc .fucc-small {
+	font-size: 12px;
+}
+.fucc .num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+/* steps */
+.fucc .fucc-steps {
+	display: flex;
+	gap: 4px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--fucc-line);
+	background: var(--fucc-panel);
+	flex-wrap: wrap;
+	flex: none;
+}
+.fucc .fucc-step {
+	flex: 1 1 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: transparent;
+	border: 1px solid transparent;
+	color: var(--fucc-muted);
+	border-radius: 6px;
+	padding: 6px 10px;
+	font-size: 13px;
+	white-space: nowrap;
+	cursor: pointer;
+	min-width: 0;
+	justify-content: flex-start;
+}
+.fucc .fucc-step .n {
+	display: inline-grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 1px solid var(--fucc-line);
+	font-size: 12px;
+	flex: none;
+}
+.fucc .fucc-step.is-done .n {
+	background: var(--fucc-good);
+	border-color: var(--fucc-good);
+	color: #fff;
+}
+.fucc .fucc-step.is-active {
+	color: var(--fucc-text);
+	border-color: var(--fucc-accent);
+	background: color-mix(in srgb, var(--fucc-accent) 12%, transparent);
+}
+.fucc .fucc-body {
+	flex: 1;
+	overflow: auto;
+	padding: 16px;
+	min-height: 0;
+}
+.fucc .fucc-foot {
+	flex: none;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-top: 1px solid var(--fucc-line);
+	background: var(--fucc-panel);
+}
+.fucc .fucc-foot-msg {
+	font-size: 13px;
+	color: var(--fucc-muted);
+	min-width: 0;
+}
+.fucc .fucc-foot-msg .fa-check {
+	color: var(--fucc-good);
+}
+.fucc .fucc-foot-btns {
+	display: flex;
+	gap: 8px;
+	flex: none;
+}
+.fucc .fucc-foot-btns button {
+	width: auto;
+	padding: 0 14px;
+	min-height: 32px;
+}
+.fucc .fucc-primary {
+	background: var(--fucc-accent) !important;
+	color: var(--fucc-accent-ink) !important;
+	border-color: var(--fucc-accent) !important;
+	font-weight: 700;
+}
+.fucc .fucc-primary:disabled {
+	opacity: 0.45;
+}
+
+/* generic bits */
+.fucc input[type='text'],
+.fucc input[type='search'],
+.fucc select {
+	background: var(--fucc-panel);
+	color: var(--fucc-text);
+	border: 1px solid var(--fucc-line);
+	border-radius: 5px;
+	height: 32px;
+	padding: 0 8px;
+}
+.fucc .fucc-mini {
+	width: auto;
+	min-height: 26px;
+	line-height: 1;
+	padding: 4px 9px;
+	font-size: 12px;
+	border-radius: 5px;
+	background: var(--fucc-panel-2);
+	border: 1px solid var(--fucc-line);
+	color: var(--fucc-text);
+	cursor: pointer;
+	white-space: nowrap;
+}
+.fucc .fucc-mini.is-on {
+	background: var(--fucc-good);
+	border-color: var(--fucc-good);
+	color: #fff;
+}
+.fucc .fucc-mini:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+.fucc .fucc-link {
+	background: none;
+	border: 0;
+	padding: 0;
+	color: var(--fucc-text);
+	font-weight: 700;
+	text-align: left;
+	cursor: pointer;
+	width: auto;
+	line-height: 1.3;
+}
+.fucc .fucc-link:hover {
+	color: var(--fucc-accent);
+	text-decoration: underline;
+}
+.fucc .fucc-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.fucc .fucc-badges span {
+	font-size: 11px;
+	padding: 1px 6px;
+	border-radius: 4px;
+	border: 1px solid var(--fucc-line);
+	color: var(--fucc-muted);
+}
+.fucc .fucc-desc {
+	font-size: 13px;
+	line-height: 1.45;
+	padding: 8px 10px;
+	margin-top: 6px;
+	background: var(--fucc-panel-2);
+	border-radius: 6px;
+}
+.fucc .fucc-desc p {
+	margin: 0 0 6px;
+}
+.fucc .fucc-empty-box {
+	border: 2px dashed var(--fucc-line);
+	border-radius: 8px;
+	padding: 26px;
+	text-align: center;
+	color: var(--fucc-muted);
+}
+.fucc .fucc-toolbar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 10px;
+	align-items: center;
+}
+.fucc .fucc-toolbar input {
+	flex: 1;
+	min-width: 0;
+}
+.fucc .fucc-toolbar select {
+	width: auto;
+}
+.fucc .fucc-col {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+.fucc .fucc-meter {
+	background: var(--fucc-panel);
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.fucc .fucc-meter b {
+	font-size: 20px;
+}
+.fucc .fucc-bar {
+	height: 6px;
+	border-radius: 3px;
+	background: var(--fucc-panel-2);
+	overflow: hidden;
+}
+.fucc .fucc-bar i {
+	display: block;
+	height: 100%;
+	background: var(--fucc-accent);
+}
+.fucc .fucc-bar.is-bad i {
+	background: var(--fucc-bad);
+}
+
+/* identity */
+.fucc .fucc-identity {
+	display: grid;
+	grid-template-columns: 200px minmax(0, 1fr);
+	gap: 24px;
+	max-width: 900px;
+}
+.fucc .fucc-portrait {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.fucc .fucc-portrait img {
+	width: 200px;
+	height: 200px;
+	object-fit: cover;
+	border-radius: 10px;
+	border: 1px solid var(--fucc-line);
+	background: var(--fucc-panel);
+}
+.fucc .fucc-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.fucc .fucc-form label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-weight: 700;
+	font-size: 13px;
+}
+.fucc .fucc-hint {
+	font-weight: 400;
+	color: var(--fucc-muted);
+	font-size: 12px;
+}
+.fucc .fucc-row2 {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 12px;
+}
+.fucc .fucc-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-top: -4px;
+}
+.fucc .fucc-chip {
+	width: auto;
+	min-height: 0;
+	padding: 3px 10px;
+	font-size: 12px;
+	border-radius: 999px;
+	background: transparent;
+	border: 1px solid var(--fucc-line);
+	color: var(--fucc-muted);
+	cursor: pointer;
+}
+.fucc .fucc-chip.is-on {
+	border-color: var(--fucc-accent);
+	color: var(--fucc-text);
+	background: color-mix(in srgb, var(--fucc-accent) 18%, transparent);
+}
+
+/* classes */
+.fucc .fucc-classes,
+.fucc .fucc-shop {
+	display: grid;
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+	gap: 16px;
+	height: 100%;
+	min-height: 0;
+}
+.fucc .fucc-class-list,
+.fucc .fucc-picked-list,
+.fucc .fucc-table-wrap {
+	overflow: auto;
+	min-height: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding-right: 4px;
+}
+.fucc .fucc-class {
+	display: grid;
+	grid-template-columns: 40px minmax(0, 1fr) auto;
+	gap: 10px;
+	align-items: center;
+	padding: 8px 10px;
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	background: var(--fucc-panel);
+}
+.fucc .fucc-class.is-on {
+	border-color: var(--fucc-good);
+}
+.fucc .fucc-class.is-info {
+	box-shadow: inset 3px 0 0 var(--fucc-accent);
+}
+.fucc .fucc-class img,
+.fucc .fucc-picked-h img {
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 6px;
+	object-fit: cover;
+}
+.fucc .fucc-class-name {
+	font-weight: 700;
+	margin-bottom: 3px;
+}
+.fucc .fucc-book {
+	font-weight: 400;
+	font-size: 11px;
+	color: var(--fucc-muted);
+	margin-left: 4px;
+}
+.fucc .fucc-class-btns {
+	display: flex;
+	gap: 4px;
+}
+.fucc .fucc-info {
+	border: 1px solid var(--fucc-accent);
+	border-radius: 8px;
+	padding: 10px;
+	margin-bottom: 10px;
+	max-height: 42%;
+	overflow: auto;
+	background: var(--fucc-panel);
+	flex: none;
+}
+.fucc .fucc-info-h {
+	display: grid;
+	grid-template-columns: 40px 1fr auto;
+	gap: 10px;
+	align-items: center;
+}
+.fucc .fucc-info-h img {
+	width: 40px;
+	height: 40px;
+	border: 0;
+}
+.fucc .fucc-info h3 {
+	margin: 0;
+	border: 0;
+}
+.fucc .fucc-picked {
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	background: var(--fucc-panel);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.fucc .fucc-picked-h {
+	display: grid;
+	grid-template-columns: 40px 1fr auto auto;
+	gap: 10px;
+	align-items: center;
+	font-size: 15px;
+}
+.fucc .fucc-lv {
+	color: var(--fucc-accent);
+	font-weight: 700;
+}
+.fucc .fucc-skill {
+	border-top: 1px solid var(--fucc-line);
+	padding-top: 6px;
+}
+.fucc .fucc-skill-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: 10px;
+	align-items: center;
+}
+.fucc .fucc-skill:not(.is-on) .fucc-link {
+	font-weight: 400;
+}
+.fucc .fucc-stepper {
+	display: flex;
+	align-items: center;
+	border: 1px solid var(--fucc-line);
+	border-radius: 5px;
+	overflow: hidden;
+}
+.fucc .fucc-stepper button {
+	width: 24px;
+	height: 24px;
+	min-height: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: var(--fucc-panel-2);
+	color: var(--fucc-text);
+	line-height: 1;
+	cursor: pointer;
+}
+.fucc .fucc-stepper button:disabled {
+	opacity: 0.35;
+}
+.fucc .fucc-stepper span {
+	min-width: 22px;
+	text-align: center;
+	font-weight: 700;
+}
+
+/* choices */
+.fucc .fucc-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+.fucc .fucc-grant header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.fucc .fucc-grant h3 {
+	margin: 0;
+	border: 0;
+}
+.fucc .fucc-count {
+	font-weight: 700;
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--fucc-panel-2);
+}
+.fucc .fucc-count.is-ok {
+	background: var(--fucc-good);
+	color: #fff;
+}
+.fucc .fucc-opts {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 6px;
+	align-items: start;
+}
+.fucc .fucc-opt {
+	border: 1px solid var(--fucc-line);
+	border-radius: 7px;
+	padding: 6px 8px;
+	background: var(--fucc-panel);
+}
+.fucc .fucc-opt.is-on {
+	border-color: var(--fucc-good);
+}
+.fucc .fucc-opt-row {
+	display: grid;
+	grid-template-columns: 24px 28px minmax(0, 1fr);
+	gap: 8px;
+	align-items: center;
+}
+.fucc .fucc-opt-row .fucc-small {
+	grid-column: 3;
+}
+.fucc .fucc-opt-row img {
+	width: 28px;
+	height: 28px;
+	border: 0;
+}
+.fucc .fucc-check {
+	width: 22px;
+	height: 22px;
+	min-height: 0;
+	padding: 0;
+	border-radius: 4px;
+	border: 1px solid var(--fucc-line);
+	background: var(--fucc-panel-2);
+	color: #fff;
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+}
+.fucc .fucc-check[aria-pressed='true'] {
+	background: var(--fucc-good);
+	border-color: var(--fucc-good);
+}
+.fucc .fucc-check:disabled {
+	opacity: 0.35;
+}
+
+/* attributes */
+.fucc .fucc-attrs {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 960px;
+}
+.fucc .fucc-profiles {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+}
+.fucc .fucc-profile {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px;
+	height: auto;
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	background: var(--fucc-panel);
+	color: var(--fucc-text);
+	cursor: pointer;
+}
+.fucc .fucc-profile span {
+	color: var(--fucc-muted);
+	font-size: 13px;
+}
+.fucc .fucc-profile.is-on {
+	border-color: var(--fucc-accent);
+	box-shadow: inset 0 0 0 1px var(--fucc-accent);
+}
+.fucc .fucc-attr-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 10px;
+}
+.fucc .fucc-attr {
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	padding: 10px;
+	background: var(--fucc-panel);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.fucc .fucc-attr-h b {
+	color: var(--fucc-accent);
+}
+.fucc .fucc-attr select {
+	font-size: 18px;
+	height: 38px;
+	font-weight: 700;
+}
+.fucc .fucc-derived {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+}
+.fucc .fucc-derived div {
+	background: var(--fucc-panel);
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	padding: 10px 12px;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: baseline;
+}
+.fucc .fucc-derived span {
+	color: var(--fucc-muted);
+	font-size: 13px;
+}
+.fucc .fucc-derived b {
+	font-size: 22px;
+}
+.fucc .fucc-derived small {
+	grid-column: 1 / -1;
+	color: var(--fucc-muted);
+	font-size: 11.5px;
+}
+
+/* shop */
+.fucc .fucc-tabs {
+	display: flex;
+	gap: 2px;
+	background: var(--fucc-panel-2);
+	border-radius: 6px;
+	padding: 2px;
+	flex: none;
+}
+.fucc .fucc-tabs button {
+	width: auto;
+	min-height: 0;
+	padding: 5px 10px;
+	font-size: 12.5px;
+	border: 0;
+	background: transparent;
+	color: var(--fucc-muted);
+	border-radius: 5px;
+	cursor: pointer;
+}
+.fucc .fucc-tabs button.is-on {
+	background: var(--fucc-panel);
+	color: var(--fucc-text);
+}
+.fucc .fucc-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 0;
+	border: 0;
+	background: transparent;
+}
+.fucc .fucc-table th {
+	text-align: left;
+	font-size: 12px;
+	color: var(--fucc-muted);
+	padding: 6px 8px;
+	border-bottom: 1px solid var(--fucc-line);
+	position: sticky;
+	top: 0;
+	background: var(--fucc-bg);
+}
+.fucc .fucc-table td {
+	padding: 6px 8px;
+	border-bottom: 1px solid var(--fucc-line);
+	vertical-align: middle;
+}
+.fucc .fucc-table tr:nth-child(even) {
+	background: transparent;
+}
+.fucc .fucc-table tr.is-blocked {
+	opacity: 0.5;
+}
+.fucc .fucc-item {
+	display: grid;
+	grid-template-columns: 30px 1fr;
+	gap: 8px;
+	align-items: center;
+}
+.fucc .fucc-item img {
+	width: 30px;
+	height: 30px;
+	border: 0;
+}
+.fucc .fucc-martial {
+	display: inline-grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+	font-size: 10px;
+	background: var(--fucc-accent);
+	color: var(--fucc-accent-ink);
+	font-weight: 700;
+}
+.fucc .fucc-cart {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 12px;
+}
+.fucc .fucc-cart-row {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	gap: 8px;
+	align-items: center;
+	padding: 5px 8px;
+	background: var(--fucc-panel);
+	border-radius: 6px;
+}
+.fucc .fucc-slots {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+.fucc .fucc-slots label {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	font-size: 12px;
+	color: var(--fucc-muted);
+}
+
+/* review */
+.fucc .fucc-review {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 1000px;
+}
+.fucc .fucc-review-h {
+	display: grid;
+	grid-template-columns: 110px 1fr;
+	gap: 16px;
+	align-items: center;
+}
+.fucc .fucc-review-h img {
+	width: 110px;
+	height: 110px;
+	object-fit: cover;
+	border-radius: 10px;
+	border: 1px solid var(--fucc-line);
+}
+.fucc .fucc-review-h h2 {
+	margin: 0 0 8px;
+	border: 0;
+}
+.fucc .fucc-traits {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.fucc .fucc-traits span {
+	background: var(--fucc-panel);
+	border: 1px solid var(--fucc-line);
+	border-radius: 6px;
+	padding: 4px 10px;
+}
+.fucc .fucc-traits small,
+.fucc .fucc-review-stats small {
+	display: block;
+	color: var(--fucc-muted);
+	font-size: 11px;
+}
+.fucc .fucc-review-stats {
+	display: grid;
+	grid-template-columns: repeat(10, minmax(0, 1fr));
+	gap: 6px;
+}
+.fucc .fucc-review-stats div {
+	background: var(--fucc-panel);
+	border-radius: 6px;
+	padding: 6px 8px;
+	text-align: center;
+}
+.fucc .fucc-review-stats b {
+	font-size: 18px;
+}
+.fucc .fucc-review-cols {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px;
+}
+.fucc .fucc-review h3 {
+	border-bottom: 1px solid var(--fucc-line);
+	margin: 0 0 6px;
+	font-size: 15px;
+}
+.fucc .fucc-ul {
+	list-style: none;
+	margin: 0 0 12px;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.fucc .fucc-ul li {
+	display: grid;
+	grid-template-columns: 120px 1fr;
+	gap: 8px;
+}
+.fucc .fucc-notes {
+	margin: 0;
+	padding-left: 18px;
+	font-size: 13px;
+}
+.fucc .fucc-issues {
+	border: 1px solid var(--fucc-bad);
+	border-radius: 8px;
+	padding: 10px 14px;
+}
+.fucc .fucc-issues h3 {
+	color: var(--fucc-bad);
+	border: 0;
+}
+.fucc .fucc-issues ul {
+	margin: 0;
+	padding-left: 18px;
+}
+.fucc .fucc-ready {
+	border: 1px solid var(--fucc-good);
+	border-radius: 8px;
+	padding: 10px 14px;
+	color: var(--fucc-good);
+}
+
+/* sidebar button */
+#actors .fucc-open,
+.actors-sidebar .fucc-open {
+	flex: 1 1 100%;
+}
+
+/* optional rules */
+.fucc .fucc-warn {
+	color: var(--fucc-bad);
+}
+.fucc .fucc-opt-sum {
+	margin: 4px 0 0 32px;
+	color: var(--fucc-muted);
+	line-height: 1.35;
+}
+.fucc .fucc-opts-tight {
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.fucc .fucc-opt-row b {
+	min-width: 0;
+}
+.fucc .fucc-textblock {
+	margin-top: 10px;
+	padding: 10px 12px;
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	background: var(--fucc-panel);
+}
+.fucc .fucc-sub {
+	margin: 12px 0 6px;
+	font-size: 14px;
+	border: 0;
+}
+.fucc textarea {
+	width: 100%;
+	background: var(--fucc-panel-2);
+	color: var(--fucc-text);
+	border: 1px solid var(--fucc-line);
+	border-radius: 5px;
+	padding: 6px 8px;
+	font-family: inherit;
+	font-size: 13px;
+	font-weight: 400;
+	resize: vertical;
+}
+.fucc .fucc-form select {
+	width: 100%;
+}
+.fucc .fucc-cw {
+	overflow: auto;
+	min-height: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-right: 4px;
+}
+.fucc .fucc-cw-tabs {
+	align-self: flex-start;
+}
+.fucc .fucc-cw-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 8px;
+}
+.fucc .fucc-cw-grid label {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	font-size: 12px;
+	color: var(--fucc-muted);
+}
+.fucc .fucc-cw-sum {
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	background: var(--fucc-panel);
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 13px;
+}
+.fucc .fucc-cw-sum .fucc-primary {
+	align-self: flex-start;
+	padding: 6px 12px;
+}
+
+/* Name + note stacked beside the control, left-aligned and vertically centred. The name buttons open the
+   description, so they are reset from Foundry's centred button style to read as text. */
+.application.fucc .fucc-skill-row {
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 12px;
+}
+.application.fucc .fucc-opt-row {
+	grid-template-columns: 22px 28px minmax(0, 1fr);
+	gap: 10px;
+}
+.application.fucc .fucc-txt {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 1px;
+	min-width: 0;
+	text-align: left;
+}
+.application.fucc .fucc-txt .fucc-small {
+	grid-column: auto;
+	line-height: 1.3;
+}
+.application.fucc .fucc-link {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	box-shadow: none;
+	text-align: left;
+	justify-content: flex-start;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	font-size: 14px;
+}
+.application.fucc .fucc-link::after {
+	content: '';
+	display: inline-block;
+	width: 5px;
+	height: 5px;
+	margin-left: 8px;
+	border-right: 1.5px solid var(--fucc-muted);
+	border-bottom: 1.5px solid var(--fucc-muted);
+	transform: rotate(45deg);
+	vertical-align: 3px;
+	transition: transform 0.15s;
+}
+.application.fucc .fucc-link[aria-expanded='true']::after {
+	transform: rotate(225deg);
+	vertical-align: 0;
+}
+.application.fucc .fucc-tag {
+	color: var(--fucc-accent);
+}
+
+/* Icon-only remove / close: a small square that turns red on hover */
+.application.fucc .fucc-x {
+	display: inline-grid;
+	place-items: center;
+	flex: none;
+	width: 26px;
+	height: 26px;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border-radius: 6px;
+	border: 1px solid transparent;
+	background: transparent;
+	box-shadow: none;
+	color: var(--fucc-muted);
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	justify-self: end;
+}
+.application.fucc .fucc-x i {
+	margin: 0;
+}
+.application.fucc .fucc-x:hover {
+	color: var(--fucc-bad);
+	border-color: color-mix(in srgb, var(--fucc-bad) 45%, transparent);
+	background: color-mix(in srgb, var(--fucc-bad) 12%, transparent);
+}
+.application.fucc .fucc-x:focus-visible {
+	outline: 2px solid var(--fucc-accent);
+	outline-offset: 1px;
+}
+
+/* Spells & features: one even list. Every row is the same height; an opened description drops below
+   its own row instead of stretching a grid row next to it. */
+.application.fucc .fucc-optlist {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--fucc-panel);
+}
+.application.fucc .fucc-optlist > .fucc-opt {
+	border: 0;
+	border-radius: 0;
+	padding: 0;
+	background: none;
+}
+.application.fucc .fucc-optlist > .fucc-opt + .fucc-opt {
+	border-top: 1px solid var(--fucc-line);
+}
+.application.fucc .fucc-optlist > .fucc-opt.is-on {
+	background: color-mix(in srgb, var(--fucc-good) 10%, transparent);
+	box-shadow: inset 3px 0 0 var(--fucc-good);
+}
+.application.fucc .fucc-optlist .fucc-opt-row {
+	min-height: 48px;
+	padding: 6px 12px;
+}
+.application.fucc .fucc-optlist .fucc-opt-row img {
+	width: 32px;
+	height: 32px;
+	object-fit: contain;
+}
+.application.fucc .fucc-optlist .fucc-opt-row {
+	grid-template-columns: 22px 32px minmax(0, 1fr);
+}
+.application.fucc .fucc-optlist .fucc-txt .fucc-small {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+.application.fucc .fucc-optlist .fucc-desc {
+	margin: 0 12px 10px 76px;
+}
+
+/* shop note + "show all" */
+.application.fucc .fucc-shopnote {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin: 0 0 6px;
+}
+.application.fucc .fucc-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+	cursor: pointer;
+	color: var(--fucc-text);
+}
+.application.fucc .fucc-toggle input {
+	margin: 0;
+	accent-color: var(--fucc-accent);
+}
+/* class feature descriptions rendered from Project FU's own templates */
+.application.fucc .fucc-desc .resource-content { display: flex; flex-direction: column; gap: 4px; margin: 0 0 6px; }
+.application.fucc .fucc-desc .resource-label-m { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fucc-accent); }
+.application.fucc .fucc-desc .description-effect p:last-child { margin-bottom: 0; }
+.application.fucc .fucc-desc table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.application.fucc .fucc-desc :is(td, th) { padding: 2px 6px; border-bottom: 1px solid var(--fucc-line); text-align: left; }
+
+/* class write-up, opened in place under its card */
+.application.fucc .fucc-class.is-info {
+	border-color: var(--fucc-accent);
+	box-shadow: none;
+}
+.application.fucc .fucc-mini.is-reading {
+	background: var(--fucc-accent);
+	border-color: var(--fucc-accent);
+	color: var(--fucc-accent-ink);
+}
+.application.fucc .fucc-classmore {
+	grid-column: 1 / -1;
+	margin: 4px -2px -2px;
+	padding: 10px 12px;
+	border-top: 1px solid var(--fucc-line);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.application.fucc .fucc-classsum {
+	margin: 0;
+	font-size: 13px;
+	font-style: italic;
+	color: var(--fucc-muted);
+	line-height: 1.4;
+}
+.application.fucc .fucc-classdesc {
+	max-height: 300px;
+	overflow-y: auto;
+	padding-right: 6px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--fucc-text);
+	overflow-wrap: anywhere;
+}
+.application.fucc .fucc-classdesc > :first-child { margin-top: 0; }
+.application.fucc .fucc-classdesc p { margin: 0 0 8px; }
+.application.fucc .fucc-classdesc :is(h1, h2, h3, h4, h5) {
+	margin: 12px 0 4px;
+	padding: 0;
+	border: 0;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fucc-accent);
+}
+.application.fucc .fucc-classdesc :is(ul, ol) { margin: 0 0 8px; padding-left: 18px; }
+.application.fucc .fucc-classdesc li { margin: 2px 0; }
+.application.fucc .fucc-classdesc img { max-width: 100%; max-height: 140px; width: auto; height: auto; border: 0; }
+.application.fucc .fucc-classdesc table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 12px; }
+.application.fucc .fucc-classdesc :is(td, th) { padding: 3px 6px; border-bottom: 1px solid var(--fucc-line); text-align: left; vertical-align: top; }
+.application.fucc .fucc-classdesc blockquote { margin: 0 0 8px; padding: 4px 10px; border-left: 3px solid var(--fucc-line); color: var(--fucc-muted); }
+.application.fucc .fucc-classmore-f {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
