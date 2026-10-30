@@ -2,8 +2,16 @@
 
 A step-by-step character creation wizard for the Project FU system on Foundry VTT v13.
 
+| | |
+|---|---|
+| ![Classes and Skills step](docs/classes.png) | ![Attributes step](docs/attributes.png) |
+| Classes & Skills | Attributes, with live HP, MP, IP and defenses |
+
 ## Install
-Unzip this folder into `Data/modules/` so you get `Data/modules/fu-character-creator/module.json`, then enable **Fabula Ultima Character Creator** in your world.
+In Foundry: **Add-on Modules → Install Module**, paste this Manifest URL and click Install:
+`https://github.com/EclipseGS27/fu-character-creator/releases/latest/download/module.json`
+
+Then enable **Fabula Ultima Character Creator** in your world. (Manual install: unzip the release into `Data/modules/` so you get `Data/modules/fu-character-creator/module.json`.)
 
 Requires the Project FU system 4.14 or later on Foundry v13 (4.16.3 is the latest v13 release).
 
