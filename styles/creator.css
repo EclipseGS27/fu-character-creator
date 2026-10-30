@@ -1,30 +1,26 @@
-/* Fabula Ultima Character Creator. Dark by default, light when Foundry's theme is light. */
+/* Fabula Ultima Character Creator, in the Battle UI look: navy glass, sky lines, gold for what matters. */
+@font-face { font-family: 'FUCC Antonio'; font-weight: 400; font-display: swap; src: url('../fonts/antonio-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'FUCC Antonio'; font-weight: 700; font-display: swap; src: url('../fonts/antonio-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'FUCC PT Sans'; font-weight: 400; font-display: swap; src: url('../fonts/pt-sans-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'FUCC PT Sans'; font-weight: 700; font-display: swap; src: url('../fonts/pt-sans-latin-700-normal.woff2') format('woff2'); }
 .fucc {
-	--fucc-bg: #1b1e2a;
-	--fucc-panel: #232838;
-	--fucc-panel-2: #2a3044;
-	--fucc-line: #3a4158;
-	--fucc-text: #e9ebf3;
-	--fucc-muted: #a2a9bf;
-	--fucc-accent: #e0a93a;
-	--fucc-accent-ink: #231600;
-	--fucc-good: #4fc48c;
-	--fucc-bad: #ef6a6a;
+	--fucc-bg: #0b1220;
+	--fucc-panel: rgba(12, 20, 44, 0.9);
+	--fucc-panel-2: rgba(90, 169, 255, 0.1);
+	--fucc-line: rgba(159, 208, 255, 0.28);
+	--fucc-line-hi: rgba(159, 208, 255, 0.55);
+	--fucc-text: #eef3ff;
+	--fucc-muted: rgba(238, 243, 255, 0.6);
+	--fucc-accent: #f2c45a;
+	--fucc-accent-ink: #2a1a00;
+	--fucc-sky: #5aa9ff;
+	--fucc-good: #6fe3a0;
+	--fucc-bad: #ff8d99;
+	--fucc-disp: 'FUCC Antonio', 'Antonio', 'Arial Narrow', sans-serif;
+	--fucc-body: 'FUCC PT Sans', 'PT Sans', system-ui, sans-serif;
 	min-width: 760px;
 	min-height: 520px;
-}
-.fucc.theme-light,
-.theme-light .fucc {
-	--fucc-bg: #f6f3ec;
-	--fucc-panel: #ffffff;
-	--fucc-panel-2: #efeadf;
-	--fucc-line: #d8d0c0;
-	--fucc-text: #22252e;
-	--fucc-muted: #6a6f7d;
-	--fucc-accent: #b27512;
-	--fucc-accent-ink: #ffffff;
-	--fucc-good: #1f8a57;
-	--fucc-bad: #c23b3b;
+	color-scheme: dark;
 }
 .fucc .window-content {
 	padding: 0;
@@ -1150,3 +1146,77 @@
 	justify-content: space-between;
 	gap: 10px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Battle UI look                                                     */
+/* ------------------------------------------------------------------ */
+
+.application.fucc { background: var(--fucc-bg); border: 1px solid var(--fucc-line); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); font-family: var(--fucc-body); }
+.application.fucc .window-header { background: rgba(12, 20, 44, 0.98); color: var(--fucc-text); border-bottom: 1px solid rgba(159, 208, 255, 0.16); font-family: var(--fucc-disp); letter-spacing: 0.08em; text-transform: uppercase; }
+.fucc .window-content {
+	font-family: var(--fucc-body);
+	background:
+		radial-gradient(900px 420px at 12% -12%, rgba(90, 169, 255, 0.18), transparent 70%),
+		radial-gradient(600px 400px at 110% 110%, rgba(242, 196, 90, 0.06), transparent 70%),
+		var(--fucc-bg);
+}
+.fucc :is(h1, h2, h3, h4) { font-family: var(--fucc-disp); font-weight: 400; letter-spacing: 0.04em; color: var(--fucc-text); }
+.fucc ::-webkit-scrollbar { width: 6px; height: 6px; }
+.fucc ::-webkit-scrollbar-thumb { background: rgba(159, 208, 255, 0.3); border-radius: 3px; }
+.fucc * { scrollbar-width: thin; scrollbar-color: rgba(159, 208, 255, 0.3) transparent; }
+
+/* steps: the battle menu's tab bar, numbers in diamonds */
+.fucc .fucc-steps { background: rgba(12, 20, 44, 0.75); border-bottom: 1px solid rgba(159, 208, 255, 0.22); padding: 10px 16px 0; gap: 2px 14px; }
+.fucc .fucc-step {
+	border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px 9px; background: none;
+	font-family: var(--fucc-disp); font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(238, 243, 255, 0.5);
+}
+.fucc .fucc-step:hover { color: var(--fucc-text); }
+.fucc .fucc-step .n {
+	width: 20px; height: 20px; border-radius: 2px; transform: rotate(45deg) scale(0.86); border: 1.5px solid currentColor;
+	background: none; margin-right: 4px;
+}
+.fucc .fucc-step .n i { transform: rotate(-45deg) scale(1.16); font-style: normal; font-family: var(--fucc-disp); font-size: 11px; letter-spacing: 0; }
+.fucc .fucc-step.is-done .n { background: rgba(111, 227, 160, 0.2); border-color: var(--fucc-good); color: var(--fucc-good); }
+.fucc .fucc-step.is-active { color: var(--fucc-accent); border-bottom-color: var(--fucc-accent); background: none; text-shadow: 0 0 12px rgba(242, 196, 90, 0.35); }
+.fucc .fucc-step.is-active .n { border-color: var(--fucc-accent); background: rgba(242, 196, 90, 0.2); box-shadow: 0 0 10px rgba(242, 196, 90, 0.45); color: var(--fucc-accent); }
+
+/* buttons: glass with a sky edge; the primary one is the gold Battle UI button */
+.fucc button:not(.fucc-step) { border-color: var(--fucc-line); background: var(--fucc-panel-2); color: var(--fucc-text); border-radius: 4px; transition: filter 0.12s, border-color 0.12s, background 0.12s; }
+.fucc button:not(.fucc-step):not(:disabled):hover { border-color: var(--fucc-line-hi); background: rgba(90, 169, 255, 0.2); }
+.fucc .fucc-primary {
+	background: linear-gradient(180deg, #ffe19a, #f2c45a 55%, #c9952e) !important; color: var(--fucc-accent-ink) !important; border-color: #fff3d1 !important;
+	font-family: var(--fucc-disp); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 0 14px rgba(242, 196, 90, 0.35);
+}
+.fucc .fucc-primary:not(:disabled):hover { filter: brightness(1.1); }
+.fucc .fucc-foot { background: rgba(9, 15, 32, 0.95); border-top: 1px solid rgba(159, 208, 255, 0.22); }
+.fucc .fucc-foot-btns button:not(.fucc-primary) { font-family: var(--fucc-disp); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* fields */
+.fucc :is(input[type='text'], input[type='search'], input[type='number'], select, textarea) { background: rgba(255, 255, 255, 0.05); border-color: var(--fucc-line); color: var(--fucc-text); border-radius: 6px; box-shadow: none; font-family: var(--fucc-body); }
+.fucc :is(input, select, textarea):focus { border-color: var(--fucc-accent); outline: none; box-shadow: 0 0 0 1px rgba(242, 196, 90, 0.35); }
+.fucc select option, .fucc select optgroup { background: #121b33; color: var(--fucc-text); }
+
+/* panels and cards: navy glass, a gold cursor on what's picked */
+.fucc :is(.fucc-class, .fucc-picked, .fucc-meter, .fucc-info, .fucc-opt, .fucc-attr, .fucc-item, .fucc-cart, .fucc-review, .fucc-derived, .fucc-profile, .fucc-cw, .fucc-textblock) { background: var(--fucc-panel); border-color: var(--fucc-line); }
+.fucc .fucc-class { position: relative; transition: border-color 0.12s, background 0.12s; }
+.fucc .fucc-class:hover { border-color: var(--fucc-line-hi); }
+.fucc .fucc-class.is-on { border-color: var(--fucc-accent); background: linear-gradient(90deg, rgba(242, 196, 90, 0.14), var(--fucc-panel) 60%); }
+.fucc .fucc-class.is-info { box-shadow: inset 3px 0 0 var(--fucc-accent); }
+.fucc :is(.fucc-class-name, .fucc-picked-h, .fucc-info-h) { font-family: var(--fucc-disp); font-weight: 400; letter-spacing: 0.03em; font-size: 18px; }
+.fucc .fucc-class-name .fucc-book { font-family: var(--fucc-body); letter-spacing: 0; }
+.fucc .fucc-lv { font-family: var(--fucc-disp); font-weight: 400; font-size: 18px; color: var(--fucc-accent); }
+.fucc .fucc-info { border-color: rgba(242, 196, 90, 0.55); }
+.fucc .fucc-chip { border-color: rgba(238, 243, 255, 0.2); color: var(--fucc-muted); background: none; border-radius: 999px; }
+.fucc .fucc-chip.is-on { color: var(--fucc-accent); border-color: var(--fucc-accent); background: rgba(242, 196, 90, 0.14); }
+.fucc .fucc-mini.is-on { border-color: var(--fucc-good) !important; background: rgba(111, 227, 160, 0.16) !important; color: var(--fucc-good) !important; }
+.fucc .fucc-stepper { border-color: var(--fucc-line); background: rgba(0, 0, 0, 0.2); }
+.fucc .fucc-stepper button { background: transparent; border: 0; }
+.fucc .fucc-stepper b, .fucc .fucc-stepper span { font-family: var(--fucc-disp); font-size: 16px; }
+.fucc .fucc-meter b, .fucc .fucc-count b { font-family: var(--fucc-disp); font-weight: 400; font-size: 24px; color: var(--fucc-accent); }
+.fucc .fucc-bar { background: rgba(255, 255, 255, 0.08); }
+.fucc .fucc-bar > * { background: linear-gradient(90deg, #3d7bd6, #7cb8ff); }
+.fucc .fucc-empty-box { border-color: rgba(159, 208, 255, 0.3); color: var(--fucc-muted); }
+.fucc .fucc-hint { color: var(--fucc-muted); }
+.fucc :is(.fucc-derived, .fucc-review-stats) b { font-family: var(--fucc-disp); font-weight: 400; font-size: 26px; }
+.fucc .fucc-attr-h b { font-family: var(--fucc-disp); font-weight: 400; letter-spacing: 0.06em; }

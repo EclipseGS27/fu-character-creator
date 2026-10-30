@@ -346,7 +346,7 @@ export class CharacterCreator extends ApplicationV2 {
 		const stepId = STEPS[s.step][0];
 		const nav = STEPS.map(([id, label], i) => {
 			const bad = id !== 'review' && (this.issues(id).length || (id === 'choices' && this.issues('classes').length));
-			return `<button type="button" class="fucc-step ${i === s.step ? 'is-active' : ''} ${bad ? '' : 'is-done'}" data-action="step" data-step="${i}"><span class="n">${i + 1}</span>${label}</button>`;
+			return `<button type="button" class="fucc-step ${i === s.step ? 'is-active' : ''} ${bad ? '' : 'is-done'}" data-action="step" data-step="${i}"><span class="n"><i>${i + 1}</i></span>${label}</button>`;
 		}).join('');
 		const body = this.#stepHtml(stepId);
 		const issues = stepId === 'review' ? [] : this.issues(stepId);

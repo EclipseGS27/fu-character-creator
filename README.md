@@ -2,8 +2,16 @@
 
 A step-by-step character creation wizard for the Project FU system on Foundry VTT v13.
 
+| | |
+|---|---|
+| ![Classes and Skills step](docs/classes.png) | ![Attributes step](docs/attributes.png) |
+| Classes & Skills | Attributes, with live HP, MP, IP and defenses |
+
 ## Install
-Unzip this folder into `Data/modules/` so you get `Data/modules/fu-character-creator/module.json`, then enable **Fabula Ultima Character Creator** in your world.
+In Foundry: **Add-on Modules → Install Module**, paste this Manifest URL and click Install:
+`https://github.com/EclipseGS27/fu-character-creator/releases/latest/download/module.json`
+
+Then enable **Fabula Ultima Character Creator** in your world. (Manual install: unzip the release into `Data/modules/` so you get `Data/modules/fu-character-creator/module.json`.)
 
 Requires the Project FU system 4.14 or later on Foundry v13 (4.16.3 is the latest v13 release).
 
@@ -19,6 +27,8 @@ Requires the Project FU system 4.14 or later on Foundry v13 (4.16.3 is the lates
 4. **Attributes:** Jack of All Trades, Average or Specialized, with live HP, MP, IP, Defense, Magic Defense and Initiative.
 5. **Equipment:** spend the 500 z budget on gear your classes let you use (tick "Show all" to see martial gear you can't equip), then choose what to equip.
 6. **Review:** create the character, or apply to the chosen actor.
+
+The wizard has the same look as Fabula Ultima Battle UI: navy glass panels, the battle menu's tab bar with the steps in diamonds, gold for what you've picked. It ships its own fonts (Antonio and PT Sans, SIL Open Font License, see `fonts/`), so it looks the same without the Battle UI.
 
 Classes, Skills, spells, class features and equipment are all read from your Item compendiums, so homebrew in world or module compendiums shows up automatically.
 
