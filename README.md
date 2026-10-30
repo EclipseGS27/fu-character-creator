@@ -20,6 +20,8 @@ Requires the Project FU system 4.14 or later on Foundry v13 (4.16.3 is the lates
 5. **Equipment:** spend the 500 z budget on gear your classes let you use (tick "Show all" to see martial gear you can't equip), then choose what to equip.
 6. **Review:** create the character, or apply to the chosen actor.
 
+The wizard has the same look as Fabula Ultima Battle UI: navy glass panels, the battle menu's tab bar with the steps in diamonds, gold for what you've picked. It ships its own fonts (Antonio and PT Sans, SIL Open Font License, see `fonts/`), so it looks the same without the Battle UI.
+
 Classes, Skills, spells, class features and equipment are all read from your Item compendiums, so homebrew in world or module compendiums shows up automatically.
 
 ## Settings
