@@ -868,13 +868,13 @@ export class CharacterCreator extends ApplicationV2 {
 			const opts = QUIRKS.map((x) => {
 				const on = q.pick === x.name;
 				const who = this.taken.quirk.get(x.name.toLowerCase());
-				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickQuirk" data-name="${esc(x.name)}" aria-pressed="${on}">${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><span></span><b>${esc(x.name)}</b><span class="fucc-muted fucc-small">${esc(pagesText(x.pages))}${who ? ` · <span class="fucc-warn">taken by ${esc(who)}</span>` : ''}</span></div></div>`;
+				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickQuirk" data-name="${esc(x.name)}" aria-pressed="${on}">${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${esc(x.name)}</b><span class="fucc-muted fucc-small">${esc(pagesText(x.pages))}${who ? ` · <span class="fucc-warn">taken by ${esc(who)}</span>` : ''}</span></div></div></div>`;
 			}).join('');
 			const custom = q.pick === '__custom';
 			const picked = QUIRKS.find((x) => x.name === q.pick);
 			blocks.push(`<section class="fucc-grant"><header><h3>Quirk</h3><span class="fucc-count ${q.pick ? 'is-ok' : ''}">${q.pick ? 1 : 0} / 1</span></header>
 				<p class="fucc-muted fucc-small">One Quirk per character, and no two characters in the group may share one. Pick from the Atlases or write your own with the GM.</p>
-				<div class="fucc-opts fucc-opts-tight">${opts}<div class="fucc-opt ${custom ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickQuirk" data-name="__custom" aria-pressed="${custom}">${custom ? '<i class="fa-solid fa-check"></i>' : ''}</button><span></span><b>Write your own</b><span class="fucc-muted fucc-small">agree it with your GM</span></div></div></div>
+				<div class="fucc-optlist fucc-optlist-plain">${opts}<div class="fucc-opt ${custom ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickQuirk" data-name="__custom" aria-pressed="${custom}">${custom ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>Write your own</b><span class="fucc-muted fucc-small">agree it with your GM</span></div></div></div></div>
 				${q.pick ? `<div class="fucc-form fucc-textblock"><label>Quirk name<input type="text" name="opt.quirk.name" value="${esc(q.name)}"></label>
 				<label>Rules text <span class="fucc-hint">${picked ? `Copy or summarize ${esc(picked.name)} from ${esc(pagesText(picked.pages))}. ` : ''}This becomes the Quirk's description on your sheet.</span><textarea name="opt.quirk.text" rows="7">${esc(q.text)}</textarea></label></div>` : ''}
 			</section>`);
@@ -885,14 +885,14 @@ export class CharacterCreator extends ApplicationV2 {
 				const on = c.picks.includes(a.name);
 				const full = !on && c.picks.length >= CAMP_PICKS;
 				const who = this.taken.camp.get(a.name.toLowerCase());
-				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="toggleCamp" data-name="${esc(a.name)}" aria-pressed="${on}" ${full ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><span></span><b>${esc(a.name)}</b><span class="fucc-muted fucc-small">${esc(a.target)} · p.${a.page}${who ? ` · <span class="fucc-warn">also taken by ${esc(who)}</span>` : ''}</span></div><div class="fucc-small fucc-opt-sum">${esc(a.summary)}</div></div>`;
+				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="toggleCamp" data-name="${esc(a.name)}" aria-pressed="${on}" ${full ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${esc(a.name)}</b><span class="fucc-muted fucc-small">${esc(a.target)} · p.${a.page}${who ? ` · <span class="fucc-warn">also taken by ${esc(who)}</span>` : ''}</span></div></div><div class="fucc-small fucc-opt-sum">${esc(a.summary)}</div></div>`;
 			}).join('');
 			const texts = c.picks
 				.map((n) => `<label>${esc(n)} <span class="fucc-hint">Edit to match the book's wording if you like.</span><textarea name="opt.camp.${esc(n)}" rows="3">${esc(c.text[n] ?? '')}</textarea></label>`)
 				.join('');
 			blocks.push(`<section class="fucc-grant"><header><h3>Camp Activities</h3><span class="fucc-count ${c.picks.length === CAMP_PICKS ? 'is-ok' : ''}">${c.picks.length} / ${CAMP_PICKS}</span></header>
 				<p class="fucc-muted fucc-small">During a resting scene, perform one of your two activities. Try not to double up with the rest of the group. Natural Fantasy Atlas p.130.</p>
-				<div class="fucc-opts">${opts}</div>${texts ? `<div class="fucc-form fucc-textblock">${texts}</div>` : ''}</section>`);
+				<div class="fucc-optlist fucc-optlist-plain">${opts}</div>${texts ? `<div class="fucc-form fucc-textblock">${texts}</div>` : ''}</section>`);
 		}
 		if (OPT.zero()) {
 			const z = s.zero;
@@ -904,7 +904,7 @@ export class CharacterCreator extends ApplicationV2 {
 					.map((x) => {
 						const on = cur === x.id;
 						const who = takenMap.get(x.name.toLowerCase());
-						return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickZero" data-kind="${kind}" data-id="${x.id}" aria-pressed="${on}">${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><span></span><b>${esc(x.name)}</b><span class="fucc-muted fucc-small">${x.fill ? esc(x.fill) : ''}${who ? `${x.fill ? ' · ' : ''}<span class="fucc-warn">used by ${esc(who)}</span>` : ''}</span></div><div class="fucc-small fucc-opt-sum">${esc(x.summary)}</div></div>`;
+						return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="pickZero" data-kind="${kind}" data-id="${x.id}" aria-pressed="${on}">${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${esc(x.name)}</b><span class="fucc-muted fucc-small">${x.fill ? esc(x.fill) : ''}${who ? `${x.fill ? ' · ' : ''}<span class="fucc-warn">used by ${esc(who)}</span>` : ''}</span></div></div><div class="fucc-small fucc-opt-sum">${esc(x.summary)}</div></div>`;
 					})
 					.join('');
 			const chips = (kind, values, chosen) => `<div class="fucc-chips">${values.map((v) => `<button type="button" class="fucc-chip ${chosen.includes(v) ? 'is-on' : ''}" data-action="toggleZeroOpt" data-kind="${kind}" data-value="${v}">${v}</button>`).join('')}</div>`;
@@ -915,8 +915,8 @@ export class CharacterCreator extends ApplicationV2 {
 			blocks.push(`<section class="fucc-grant"><header><h3>Zero Power</h3></header>
 				<p class="fucc-muted fucc-small">Your limit break: a 6-section Zero Clock fills when you lose HP, spend Fabula Points on invocations, or your trigger fires. When full, use the Skill action to unleash the effect. No two characters may share a trigger or an effect. High Fantasy Atlas p.124.${awakened ? ' <b>Awakened Power:</b> pick the effect now; the trigger is chosen when the power awakens in play (p.130).' : ''}</p>
 				<div class="fucc-form"><label>Power name <span class="fucc-hint">Name it yourself, or use the name tables on p.128.</span><input type="text" name="opt.zero.name" value="${esc(z.name)}" placeholder="Thundering Fang"></label></div>
-				${awakened ? '' : `<h4 class="fucc-sub">Trigger</h4><div class="fucc-opts">${list(ZERO_TRIGGERS, 'trigger', z.trigger, this.taken.trigger)}</div>`}
-				<h4 class="fucc-sub">Effect</h4><div class="fucc-opts">${list(ZERO_EFFECTS, 'effect', z.effect, this.taken.effect)}</div>
+				${awakened ? '' : `<h4 class="fucc-sub">Trigger</h4><div class="fucc-optlist fucc-optlist-plain">${list(ZERO_TRIGGERS, 'trigger', z.trigger, this.taken.trigger)}</div>`}
+				<h4 class="fucc-sub">Effect</h4><div class="fucc-optlist fucc-optlist-plain">${list(ZERO_EFFECTS, 'effect', z.effect, this.taken.effect)}</div>
 				${extra ? `<div class="fucc-form fucc-textblock">${extra}</div>` : ''}
 				${trig || eff ? `<div class="fucc-form fucc-textblock">${trig ? `<label>Trigger text <span class="fucc-hint">Edit to match the book if you like.</span><textarea name="opt.zero.triggerText" rows="3">${esc(z.triggerText)}</textarea></label>` : ''}${eff ? `<label>Effect text<textarea name="opt.zero.effectText" rows="3">${esc(z.effectText)}</textarea></label>` : ''}</div>` : ''}
 			</section>`);
@@ -937,7 +937,7 @@ export class CharacterCreator extends ApplicationV2 {
 			const on = f.custom.includes(c.id);
 			const lockedTransform = c.id === 'transforming' && formKey === 'b';
 			const blocked = !on && (used + c.slots > 3 || (c.id === 'powerful' && (['arcane', 'dagger'].includes(f.category) || f.custom.includes('quick'))) || (c.id === 'quick' && f.custom.includes('powerful')));
-			return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="cwToggle" data-id="${c.id}" aria-pressed="${on}" ${blocked || lockedTransform ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><span></span><b>${c.name}${c.martial ? ' <span class="fucc-martial" title="Makes the weapon martial">M</span>' : ''}</b><span class="fucc-muted fucc-small">${c.slots > 1 ? 'counts as 2' : ''}</span></div><div class="fucc-small fucc-opt-sum">${esc(c.summary)}</div></div>`;
+			return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="cwToggle" data-id="${c.id}" aria-pressed="${on}" ${blocked || lockedTransform ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${c.name}${c.martial ? ' <span class="fucc-martial" title="Makes the weapon martial">M</span>' : ''}</b><span class="fucc-muted fucc-small">${c.slots > 1 ? 'counts as 2' : ''}</span></div></div><div class="fucc-small fucc-opt-sum">${esc(c.summary)}</div></div>`;
 		}).join('');
 		const sel = (name, value, options) => `<select name="${name}">${options.map(([v, l]) => `<option value="${v}" ${value === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 		return `<div class="fucc-cw" data-scroll="cw">
@@ -951,7 +951,7 @@ export class CharacterCreator extends ApplicationV2 {
 				<label>Accuracy${sel('cw.form.acc', `${f.primary}+${f.secondary}`, [['dex+ins', 'DEX + INS'], ['dex+mig', 'DEX + MIG']])}</label>
 				${f.custom.includes('elemental') ? `<label>Element${sel('cw.form.element', f.element, ELEMENTS.map((e) => [e, e[0].toUpperCase() + e.slice(1)]))}</label>` : ''}
 			</div>
-			<div class="fucc-opts fucc-opts-tight">${custom}</div>
+			<div class="fucc-optlist fucc-optlist-plain">${custom}</div>
 			<div class="fucc-cw-sum">
 				${sumr.stats.map((st, i) => `<div><b>${sumr.transforming ? (i ? 'Form II' : 'Form I') : 'Stats'}</b> ${esc(formLine(st))}</div>`).join('')}
 				<div><b>Cost</b> ${sumr.cost} z${sumr.martial ? ' · martial' : ''}</div>

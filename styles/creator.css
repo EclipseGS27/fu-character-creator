@@ -499,12 +499,6 @@
 	background: var(--fucc-good);
 	color: #fff;
 }
-.fucc .fucc-opts {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-	gap: 6px;
-	align-items: start;
-}
 .fucc .fucc-opt {
 	border: 1px solid var(--fucc-line);
 	border-radius: 7px;
@@ -850,9 +844,6 @@
 	color: var(--fucc-muted);
 	line-height: 1.35;
 }
-.fucc .fucc-opts-tight {
-	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-}
 .fucc .fucc-opt-row b {
 	min-width: 0;
 }
@@ -1056,6 +1047,18 @@
 	text-overflow: ellipsis;
 	max-width: 100%;
 }
+/* Lists without icons (Quirks, Camp Activities, Zero Power, weapon customizations): the spells list's rows,
+   with the summary under the name. */
+.application.fucc .fucc-optlist-plain .fucc-opt-row {
+	grid-template-columns: 22px minmax(0, 1fr);
+}
+.application.fucc .fucc-optlist-plain .fucc-txt .fucc-small {
+	white-space: normal;
+}
+.application.fucc .fucc-optlist-plain .fucc-opt-sum {
+	margin: -4px 12px 10px 44px;
+	text-align: left;
+}
 .application.fucc .fucc-optlist .fucc-desc {
 	margin: 0 12px 10px 76px;
 }
@@ -1168,6 +1171,7 @@
 /* steps: the battle menu's tab bar, numbers in diamonds */
 .fucc .fucc-steps { background: rgba(12, 20, 44, 0.75); border-bottom: 1px solid rgba(159, 208, 255, 0.22); padding: 10px 16px 0; gap: 2px 14px; }
 .fucc .fucc-step {
+	flex: 1 0 auto; width: auto; justify-content: center;
 	border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px 9px; background: none;
 	font-family: var(--fucc-disp); font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(238, 243, 255, 0.5);
 }
