@@ -1,4 +1,4 @@
-import { loadCatalog, describe } from './catalog.mjs';
+import { loadCatalog, describe, slug } from './catalog.mjs';
 import {
 	MODULE_ID,
 	START_LEVEL,
@@ -42,6 +42,9 @@ import {
 } from './optional.mjs';
 
 const { ApplicationV2 } = foundry.applications.api;
+
+const GEAR_TYPES = ['weapon', 'armor', 'shield', 'accessory', 'customWeapon'];
+const CLASS_MAX_LEVEL = 10;
 
 const ALL_STEPS = [
 	['identity', 'Identity'],
@@ -108,6 +111,14 @@ export class CharacterCreator extends ApplicationV2 {
 	constructor(options = {}) {
 		super(options);
 		this.target = options.actor ?? null;
+		// A character that already has classes is edited: the creator loads what is on the sheet and only applies changes
+		this.edit = !!this.target?.items?.some((i) => i.type === 'class');
+		this.loaded = false;
+		this.owned = new Map(); // catalog uuid -> id of the actor's item it was matched to
+		this.ownedGear = new Set(); // actor item ids of equipment listed in the cart
+		this.classExtra = {}; // class fuid -> levels on the sheet not matched to a compendium Skill
+		this.extraLevels = 0; // levels in classes not found in the compendiums
+		this.has = { quirk: null, camp: [], zero: null }; // optional-rule items already on the sheet
 		this.catalog = null;
 		this.descs = new Map(); // uuid -> enriched html
 		this.expanded = new Set();
@@ -144,7 +155,8 @@ export class CharacterCreator extends ApplicationV2 {
 	}
 
 	get steps() {
-		return ALL_STEPS.filter(([id]) => id !== 'extras' || anyExtras());
+		const extras = this.edit ? OPT.quirks() || OPT.camp() || OPT.zero() : anyExtras();
+		return ALL_STEPS.filter(([id]) => id !== 'extras' || extras);
 	}
 	get stepId() {
 		return this.steps[Math.min(this.s.step, this.steps.length - 1)][0];
@@ -154,22 +166,34 @@ export class CharacterCreator extends ApplicationV2 {
 	}
 
 	get title() {
+		if (this.edit) return `Character Creator: editing ${this.target.name}`;
 		return this.target ? `Character Creator: ${this.target.name}` : 'Character Creator';
 	}
 
 	/* ---------------- data helpers ---------------- */
 
 	get budget() {
+		if (this.edit) return Number(this.target.system.resources?.zenit?.value) || 0;
 		return Number(game.settings.get(MODULE_ID, 'startingZenit')) || 0;
+	}
+	/** Levels to spend: 5 at creation; when editing, the character's level on the sheet */
+	get levelCap() {
+		if (!this.edit) return START_LEVEL;
+		return Math.max(Number(this.target.system.level?.value) || 0, this.loadedTotal ?? 0);
+	}
+	/** A Skill's class, and whether that class may take another level */
+	classRoom(sk) {
+		const f = sk.sys.class?.value;
+		return !this.edit || this.classLevel(f) < CLASS_MAX_LEVEL;
 	}
 	classEntry(fuid) {
 		return this.catalog.classes.find((c) => c.fuid === fuid);
 	}
 	classLevel(fuid) {
-		return sum(this.catalog.skillsOf(fuid).map((sk) => this.s.skills[sk.uuid] ?? 0));
+		return sum(this.catalog.skillsOf(fuid).map((sk) => this.s.skills[sk.uuid] ?? 0)) + (this.classExtra[fuid] ?? 0);
 	}
 	get totalLevels() {
-		return sum(Object.values(this.s.skills));
+		return sum(Object.values(this.s.skills)) + sum(Object.values(this.classExtra)) + this.extraLevels;
 	}
 	get martials() {
 		const m = { melee: false, ranged: false, armor: false, shields: false };
@@ -191,13 +215,20 @@ export class CharacterCreator extends ApplicationV2 {
 	}
 	cartEntry(c) {
 		if (!c) return null;
+		if (c.owned) return this.#ownedEntry(c.owned);
 		return c.custom ? customWeaponEntry(c.custom) : this.catalog.byUuid.get(c.uuid);
+	}
+	/** Equipment already on the sheet, shaped like a catalog entry */
+	#ownedEntry(id) {
+		const it = this.target?.items.get(id);
+		if (!it) return null;
+		return { name: it.name, type: it.type, img: it.img, owned: true, sys: foundry.utils.deepClone(it._source.system ?? {}) };
 	}
 	cartItem(key) {
 		return this.cartEntry(this.s.cart.find((x) => x.key === key));
 	}
 	get spent() {
-		return sum(this.s.cart.map((c) => this.cartEntry(c)?.sys.cost?.value ?? 0));
+		return sum(this.s.cart.filter((c) => !c.owned).map((c) => this.cartEntry(c)?.sys.cost?.value ?? 0));
 	}
 
 	/** Every pick the chosen Skills require (spells + class features). */
@@ -250,8 +281,8 @@ export class CharacterCreator extends ApplicationV2 {
 	get derived() {
 		const a = this.s.attrs;
 		const r = this.resourceBonus;
-		const hp = START_LEVEL + a.mig * 5 + r.hp + (OPT.higherHp() ? 10 : 0);
-		const mp = START_LEVEL + a.wlp * 5 + r.mp;
+		const hp = this.levelCap + a.mig * 5 + r.hp + (OPT.higherHp() ? 10 : 0);
+		const mp = this.levelCap + a.wlp * 5 + r.mp;
 		const ip = 6 + r.ip;
 		const armor = this.cartItem(this.s.equip.armor);
 		const off = this.cartItem(this.s.equip.offHand);
@@ -277,23 +308,32 @@ export class CharacterCreator extends ApplicationV2 {
 		if (!this.catalog) return out;
 		if (!stepId || stepId === 'identity') {
 			if (!s.name.trim()) out.push(['identity', 'Give your character a name.']);
-			if (!s.identity.trim()) out.push(['identity', 'Write an Identity: a short sentence about who your character is.']);
+			// an existing character may have left these blank on purpose
+			if (this.edit) {
+				/* nothing else required */
+			} else if (!s.identity.trim()) out.push(['identity', 'Write an Identity: a short sentence about who your character is.']);
 			if (!s.theme.trim()) out.push(['identity', 'Choose or write a Theme.']);
 			if (!s.origin.trim()) out.push(['identity', 'Write an Origin: where your character comes from.']);
 		}
 		if (!stepId || stepId === 'classes') {
-			if (s.classes.length < MIN_CLASSES) out.push(['classes', `Choose at least ${MIN_CLASSES} classes (you have ${s.classes.length}).`]);
 			const t = this.totalLevels;
-			if (t !== START_LEVEL) out.push(['classes', `Spend exactly ${START_LEVEL} levels on Skills (${t} spent).`]);
+			if (this.edit) {
+				if (t > this.levelCap) out.push(['classes', `${this.target.name} is level ${this.levelCap}: take ${t - this.levelCap} Skill Level${t - this.levelCap === 1 ? '' : 's'} off (${t} spent).`]);
+				for (const f of s.classes) if (this.classLevel(f) > CLASS_MAX_LEVEL) out.push(['classes', `${this.classEntry(f)?.name} is above level ${CLASS_MAX_LEVEL}.`]);
+			} else {
+				if (s.classes.length < MIN_CLASSES) out.push(['classes', `Choose at least ${MIN_CLASSES} classes (you have ${s.classes.length}).`]);
+				if (t !== START_LEVEL) out.push(['classes', `Spend exactly ${START_LEVEL} levels on Skills (${t} spent).`]);
+			}
 			for (const f of s.classes) if (!this.classLevel(f)) out.push(['classes', `${this.classEntry(f)?.name} needs at least one level.`]);
 		}
 		if (!stepId || stepId === 'choices') {
 			for (const g of this.grants) {
 				const n = (s.picks[g.key] ?? []).length;
-				if (n !== g.count) out.push(['choices', `${g.label}: choose ${g.count} (${n} chosen).`]);
+				// when editing, picks the sheet got elsewhere (homebrew, story rewards) may fill the rest, so fewer is allowed
+				if (this.edit ? n > g.count : n !== g.count) out.push(['choices', `${g.label}: choose ${g.count} (${n} chosen).`]);
 			}
 		}
-		if (!stepId || stepId === 'attributes') {
+		if ((!stepId || stepId === 'attributes') && !this.edit) {
 			const want = [...PROFILES[s.profile].dice].sort().join(',');
 			const have = ATTRS.map(([k]) => s.attrs[k]).sort().join(',');
 			if (want !== have) out.push(['attributes', `Assign the ${PROFILES[s.profile].label} dice: ${PROFILES[s.profile].dice.map((d) => 'd' + d).join(', ')}.`]);
@@ -302,11 +342,12 @@ export class CharacterCreator extends ApplicationV2 {
 			if (this.spent > this.budget) out.push(['equipment', `You are ${this.spent - this.budget} z over your ${this.budget} z budget.`]);
 			const m = this.martials;
 			for (const c of s.cart) {
+				if (c.owned) continue;
 				const it = this.cartEntry(c);
 				if (it && !canEquip(it, m)) out.push(['equipment', `${it.name} is martial and none of your classes let you equip it.`]);
 			}
 		}
-		if ((!stepId || stepId === 'extras') && anyExtras()) out.push(...this.#extraIssues());
+		if ((!stepId || stepId === 'extras') && this.steps.some(([id]) => id === 'extras')) out.push(...this.#extraIssues());
 		return out;
 	}
 
@@ -314,6 +355,7 @@ export class CharacterCreator extends ApplicationV2 {
 
 	async _prepareContext() {
 		if (!this.catalog) this.catalog = await getCatalog();
+		if (this.edit && !this.loaded) this.#loadActor();
 		// prefetch descriptions for selected classes' skills
 		for (const f of this.s.classes) for (const sk of this.catalog.skillsOf(f)) this.#want(sk.uuid);
 		if (this.s.info) {
@@ -321,6 +363,81 @@ export class CharacterCreator extends ApplicationV2 {
 			if (c) this.#want(c.uuid);
 		}
 		return {};
+	}
+
+	/**
+	 * Fill the wizard from a character that already exists. Items are matched to the compendium catalog by type and
+	 * fuid; anything that doesn't match (Heroic Skills, homebrew, things learned in play) is left alone on the sheet.
+	 */
+	#loadActor() {
+		this.loaded = true;
+		const a = this.target;
+		const s = this.s;
+		const cat = this.catalog;
+		const sys = a.system ?? {};
+		s.identity = sys.resources?.identity?.name ?? '';
+		s.theme = sys.resources?.theme?.name ?? '';
+		s.origin = sys.resources?.origin?.name ?? '';
+		for (const [k] of ATTRS) s.attrs[k] = Number(sys.attributes?.[k]?.base) || 8;
+
+		const keyOf = (i) => `${i.type}|${i.system?.fuid || slug(i.name)}`;
+		const items = [...a.items];
+		const lv = (i) => Number(i.system?.level?.value) || 0;
+		const classItem = {};
+		for (const it of items.filter((i) => i.type === 'class')) {
+			const e = cat.byKey.get(keyOf(it));
+			if (!e || s.classes.includes(e.fuid)) {
+				this.extraLevels += lv(it);
+				continue;
+			}
+			s.classes.push(e.fuid);
+			classItem[e.fuid] = it;
+			this.owned.set(e.uuid, it.id);
+		}
+		for (const it of items.filter((i) => i.type === 'skill')) {
+			const e = cat.byKey.get(keyOf(it));
+			if (!e || !s.classes.includes(e.sys.class?.value) || this.owned.has(e.uuid)) continue;
+			s.skills[e.uuid] = Math.max(1, lv(it));
+			this.owned.set(e.uuid, it.id);
+		}
+		// a class's level beyond the Skills found for it stays as it is
+		for (const f of s.classes) this.classExtra[f] = Math.max(0, lv(classItem[f]) - this.classLevel(f));
+
+		// spells and class features, matched to what the Skills ask for
+		const free = new Map();
+		for (const it of items) {
+			if (it.type !== 'spell' && it.type !== 'classFeature') continue;
+			const k = keyOf(it);
+			if (!free.has(k)) free.set(k, []);
+			free.get(k).push(it);
+		}
+		const claim = (e) => {
+			const it = free.get(`${e.type}|${e.fuid}`)?.shift();
+			if (it) this.owned.set(e.uuid, it.id);
+			return !!it;
+		};
+		for (const g of this.grants) {
+			const got = [];
+			for (const o of g.options) if (got.length < g.count && !this.owned.has(o.uuid) && claim(o)) got.push(o.uuid);
+			if (got.length) s.picks[g.key] = got;
+		}
+		for (const f of this.autoFeatures) if (!this.owned.has(f.uuid)) claim(f);
+
+		// equipment: every piece on the sheet is listed, and stays equipped as it is
+		for (const it of items.filter((i) => GEAR_TYPES.includes(i.type))) {
+			s.cart.push({ key: `o${it.id}`, owned: it.id });
+			this.ownedGear.add(it.id);
+		}
+		const eq = sys.equipped ?? {};
+		for (const slot of Object.keys(s.equip)) {
+			const id = eq[slot];
+			s.equip[slot] = id && this.ownedGear.has(id) ? `o${id}` : null;
+		}
+
+		// optional rules already on the sheet
+		const opt = (t) => items.filter((i) => i.type === 'optionalFeature' && i.system?.optionalType === t);
+		this.has = { quirk: opt('projectfu.quirk')[0] ?? null, camp: opt('projectfu.campActivity').map((i) => i.name), zero: opt('projectfu.zeroPower')[0] ?? null };
+		this.loadedTotal = this.totalLevels;
 	}
 
 	#want(uuid) {
@@ -358,7 +475,7 @@ export class CharacterCreator extends ApplicationV2 {
 			<div class="fucc-foot-msg">${issues.length ? `<i class="fa-solid fa-circle-info"></i> ${esc(issues[0][1])}${issues.length > 1 ? ` <span class="fucc-muted">(+${issues.length - 1} more)</span>` : ''}` : stepId === 'review' ? '' : '<i class="fa-solid fa-check"></i> This step is complete.'}</div>
 			<div class="fucc-foot-btns">
 				${s.step > 0 ? '<button type="button" data-action="back"><i class="fa-solid fa-arrow-left"></i> Back</button>' : ''}
-				${isLast ? `<button type="button" class="fucc-primary" data-action="create" ${this.issues().length || this.busy ? 'disabled' : ''}>${this.busy ? 'Creating…' : this.target ? `<i class="fa-solid fa-check"></i> Apply to ${esc(this.target.name)}` : '<i class="fa-solid fa-check"></i> Create character'}</button>` : '<button type="button" class="fucc-primary" data-action="next">Next <i class="fa-solid fa-arrow-right"></i></button>'}
+				${isLast ? `<button type="button" class="fucc-primary" data-action="create" ${this.issues().length || this.busy ? 'disabled' : ''}>${this.busy ? (this.edit ? 'Saving…' : 'Creating…') : this.edit ? `<i class="fa-solid fa-check"></i> Save changes to ${esc(this.target.name)}` : this.target ? `<i class="fa-solid fa-check"></i> Apply to ${esc(this.target.name)}` : '<i class="fa-solid fa-check"></i> Create character'}</button>` : '<button type="button" class="fucc-primary" data-action="next">Next <i class="fa-solid fa-arrow-right"></i></button>'}
 			</div>
 		</footer>`;
 	}
@@ -414,7 +531,7 @@ export class CharacterCreator extends ApplicationV2 {
 			const v = Number(t.value);
 			// swap with whichever Attribute currently holds that die, so the profile stays valid
 			const old = this.s.attrs[k];
-			const other = ATTRS.map(([a]) => a).find((a) => a !== k && this.s.attrs[a] === v);
+			const other = this.edit ? null : ATTRS.map(([a]) => a).find((a) => a !== k && this.s.attrs[a] === v);
 			if (other) this.s.attrs[other] = old;
 			this.s.attrs[k] = v;
 			this.render();
@@ -493,7 +610,7 @@ export class CharacterCreator extends ApplicationV2 {
 				<div class="fucc-chips">${THEMES.map((t) => `<button type="button" class="fucc-chip ${s.theme === t ? 'is-on' : ''}" data-action="pickTheme" data-value="${t}">${t}</button>`).join('')}</div>
 				<label>Origin <span class="fucc-hint">The place they hail from.</span>
 					<input type="text" name="origin" value="${esc(s.origin)}" placeholder="Platea, a citadel above the lake"></label>
-				<p class="fucc-muted fucc-small">Identity, Theme and Origin are your first three Traits; you can invoke them to reroll dice. Starting level ${START_LEVEL}, ${STARTING_FP} Fabula Points.</p>
+				<p class="fucc-muted fucc-small">Identity, Theme and Origin are your first three Traits; you can invoke them to reroll dice. ${this.edit ? `Level ${this.levelCap}.` : `Starting level ${START_LEVEL}, ${STARTING_FP} Fabula Points.`}</p>
 			</div>
 		</div>`;
 	}
@@ -507,7 +624,7 @@ export class CharacterCreator extends ApplicationV2 {
 		const cards = list
 			.map((c) => {
 				const on = s.classes.includes(c.fuid);
-				const full = !on && s.classes.length >= MAX_CLASSES;
+				const full = !on && !this.edit && s.classes.length >= MAX_CLASSES;
 				return `<div class="fucc-class ${on ? 'is-on' : ''} ${s.info === c.fuid ? 'is-info' : ''}">
 					<img src="${esc(c.img)}" alt="">
 					<div class="fucc-class-txt">
@@ -536,7 +653,7 @@ export class CharacterCreator extends ApplicationV2 {
 						const open = this.expanded.has(sk.uuid);
 						return `<div class="fucc-skill ${sl ? 'is-on' : ''}">
 							<div class="fucc-skill-row">
-								<div class="fucc-stepper"><button type="button" data-action="skillMinus" data-uuid="${sk.uuid}" ${sl ? '' : 'disabled'} aria-label="Lower">−</button><span>${sl}</span><button type="button" data-action="skillPlus" data-uuid="${sk.uuid}" ${sl >= max || total >= START_LEVEL ? 'disabled' : ''} aria-label="Raise">+</button></div>
+								<div class="fucc-stepper"><button type="button" data-action="skillMinus" data-uuid="${sk.uuid}" ${sl ? '' : 'disabled'} aria-label="Lower">−</button><span>${sl}</span><button type="button" data-action="skillPlus" data-uuid="${sk.uuid}" ${sl >= max || total >= this.levelCap || !this.classRoom(sk) ? 'disabled' : ''} aria-label="Raise">+</button></div>
 								<div class="fucc-txt">
 									<button type="button" class="fucc-link" data-action="expand" data-uuid="${sk.uuid}" aria-expanded="${open}">${esc(sk.name)}</button>
 									<span class="fucc-muted fucc-small">max SL ${max}${traitsOf(sk.sys).includes(SPELL_SKILL_TRAIT) ? ' · <span class="fucc-tag">grants spells</span>' : ''}${FEATURE_GRANTS[sk.fuid]?.picks?.length ? ' · <span class="fucc-tag">grants choices</span>' : ''}</span>
@@ -564,7 +681,7 @@ export class CharacterCreator extends ApplicationV2 {
 				<div class="fucc-class-list" data-scroll="classes">${cards || '<p class="fucc-muted">No classes match.</p>'}</div>
 			</div>
 			<div class="fucc-col">
-				<div class="fucc-meter"><div><b>${total}</b> / ${START_LEVEL} levels</div><div class="fucc-bar"><i style="width:${Math.min(100, (total / START_LEVEL) * 100)}%"></i></div><div class="fucc-muted fucc-small">${s.classes.length} of ${MIN_CLASSES}–${MAX_CLASSES} classes. Each level buys one Skill Level in that class.</div></div>
+				<div class="fucc-meter"><div><b>${total}</b> / ${this.levelCap} levels</div><div class="fucc-bar"><i style="width:${Math.min(100, (total / Math.max(1, this.levelCap)) * 100)}%"></i></div><div class="fucc-muted fucc-small">${this.edit ? `Each level buys one Skill Level. To spend a new level, raise ${esc(this.target.name)}'s level on the sheet first. A class tops out at level ${CLASS_MAX_LEVEL}.${this.extraLevels ? ` ${this.extraLevels} of these levels are in classes not found in your compendiums; they stay as they are.` : ''}` : `${s.classes.length} of ${MIN_CLASSES}–${MAX_CLASSES} classes. Each level buys one Skill Level in that class.`}</div></div>
 				<div class="fucc-picked-list" data-scroll="picked">${picked || '<div class="fucc-empty-box">Take two or three classes on the left, then spend your five levels on their Skills here.</div>'}</div>
 			</div>
 		</div>`;
@@ -631,24 +748,26 @@ export class CharacterCreator extends ApplicationV2 {
 		const d = this.derived;
 		const r = this.resourceBonus;
 		const dice = PROFILES[s.profile].dice;
-		const uniq = [...new Set(dice)].sort((a, b) => b - a);
+		// at creation the dice come from a profile; afterwards each Attribute can be any die (Attributes rise at levels 20, 40 and 60)
+		const uniq = this.edit ? [12, 10, 8, 6] : [...new Set(dice)].sort((a, b) => b - a);
+		const lv = this.levelCap;
 		return `
 		<div class="fucc-attrs">
-			<div class="fucc-profiles">${Object.entries(PROFILES)
+			${this.edit ? '' : `<div class="fucc-profiles">${Object.entries(PROFILES)
 				.map(([k, p]) => `<button type="button" class="fucc-profile ${s.profile === k ? 'is-on' : ''}" data-action="profile" data-profile="${k}"><b>${p.label}</b><span>${p.dice.map((x) => 'd' + x).join(' · ')}</span></button>`)
-				.join('')}</div>
+				.join('')}</div>`}
 			<div class="fucc-attr-grid">${ATTRS.map(
 				([k, label, abbr, hint]) => `<div class="fucc-attr"><div class="fucc-attr-h"><b>${abbr}</b> ${label}</div><select name="attr.${k}">${uniq.map((v) => `<option value="${v}" ${s.attrs[k] === v ? 'selected' : ''}>d${v}</option>`).join('')}</select><div class="fucc-muted fucc-small">${hint}</div></div>`,
 			).join('')}</div>
 			<div class="fucc-derived">
-				<div><span>Max HP</span><b>${d.hp}</b><small>${START_LEVEL} + 5 × MIG${r.hp ? ` + ${r.hp} from classes` : ''} · Crisis ${d.crisis}</small></div>
-				<div><span>Max MP</span><b>${d.mp}</b><small>${START_LEVEL} + 5 × WLP${r.mp ? ` + ${r.mp} from classes` : ''}</small></div>
+				<div><span>Max HP</span><b>${d.hp}</b><small>${lv} + 5 × MIG${r.hp ? ` + ${r.hp} from classes` : ''} · Crisis ${d.crisis}</small></div>
+				<div><span>Max MP</span><b>${d.mp}</b><small>${lv} + 5 × WLP${r.mp ? ` + ${r.mp} from classes` : ''}</small></div>
 				<div><span>Max IP</span><b>${d.ip}</b><small>6${r.ip ? ` + ${r.ip} from classes` : ''}</small></div>
 				<div><span>Defense</span><b>${d.def}</b><small>DEX die, then armor and shield</small></div>
 				<div><span>M. Defense</span><b>${d.mdef}</b><small>INS die, then equipment</small></div>
 				<div><span>Initiative</span><b>${d.init >= 0 ? '+' : ''}${d.init}</b><small>from armor and shield</small></div>
 			</div>
-			<p class="fucc-muted fucc-small">Choosing a die for one Attribute swaps it with the Attribute that held it, so the profile always stays valid.</p>
+			<p class="fucc-muted fucc-small">${this.edit ? 'These are the base dice on the sheet. The totals above are estimates; bonuses from Skills and items on the sheet still apply.' : 'Choosing a die for one Attribute swaps it with the Attribute that held it, so the profile always stays valid.'}</p>
 		</div>`;
 	}
 
@@ -684,7 +803,8 @@ export class CharacterCreator extends ApplicationV2 {
 		const cart = s.cart
 			.map((c) => {
 				const e = this.cartEntry(c);
-				return `<div class="fucc-cart-row"><span>${esc(e?.name ?? '?')}</span><span class="num">${e?.sys.cost?.value ?? 0} z</span><button type="button" class="fucc-x" data-action="unbuy" data-key="${c.key}" title="Remove" aria-label="Remove ${esc(e?.name ?? '')}"><i class="fa-solid fa-xmark"></i></button></div>`;
+				const what = c.owned ? 'Remove from the sheet' : 'Remove';
+				return `<div class="fucc-cart-row"><span>${esc(e?.name ?? '?')}</span><span class="num">${c.owned ? '<span class="fucc-muted">owned</span>' : `${e?.sys.cost?.value ?? 0} z`}</span><button type="button" class="fucc-x" data-action="unbuy" data-key="${c.key}" title="${what}" aria-label="${what}: ${esc(e?.name ?? '')}"><i class="fa-solid fa-xmark"></i></button></div>`;
 			})
 			.join('');
 		const slotSel = (slot, label, types) => {
@@ -706,8 +826,8 @@ export class CharacterCreator extends ApplicationV2 {
 				${s.shopTab === 'custom' ? this.#customWeaponHtml(left) : `<div class="fucc-table-wrap" data-scroll="shop"><table class="fucc-table"><thead><tr><th>Item</th><th class="num">Cost</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="3" class="fucc-muted">${hidden ? `None of these ${s.shopTab}s suit your classes.` : `No ${s.shopTab}s in the allowed compendiums.`}</td></tr>`}</tbody></table></div>`}
 			</div>
 			<div class="fucc-col">
-				<div class="fucc-meter"><div><b>${left}</b> z left of ${this.budget} z</div><div class="fucc-bar ${left < 0 ? 'is-bad' : ''}"><i style="width:${Math.max(0, Math.min(100, (this.spent / Math.max(1, this.budget)) * 100))}%"></i></div><div class="fucc-muted fucc-small">${game.settings.get(MODULE_ID, 'rollSavings') ? 'Leftover zenit plus 2d6 × 10 z of savings go to your character when you finish.' : 'Leftover zenit goes to your character when you finish.'}</div></div>
-				<div class="fucc-cart">${cart || '<p class="fucc-muted">Nothing bought yet.</p>'}</div>
+				<div class="fucc-meter"><div><b>${left}</b> z left of ${this.budget} z</div><div class="fucc-bar ${left < 0 ? 'is-bad' : ''}"><i style="width:${Math.max(0, Math.min(100, (this.spent / Math.max(1, this.budget)) * 100))}%"></i></div><div class="fucc-muted fucc-small">${this.edit ? `Paid from the ${this.budget} z on ${esc(this.target.name)}'s sheet. Removing an owned item takes it off the sheet without a refund.` : game.settings.get(MODULE_ID, 'rollSavings') ? 'Leftover zenit plus 2d6 × 10 z of savings go to your character when you finish.' : 'Leftover zenit goes to your character when you finish.'}</div></div>
+				<div class="fucc-cart">${cart || `<p class="fucc-muted">${this.edit ? 'No equipment on the sheet.' : 'Nothing bought yet.'}</p>`}</div>
 				<div class="fucc-slots">${slotSel('mainHand', 'Main hand', ['weapon', 'shield', 'customWeapon'])}${slotSel('offHand', 'Off hand', ['weapon', 'shield', 'customWeapon'])}${slotSel('armor', 'Armor', ['armor'])}${slotSel('accessory', 'Accessory', ['accessory'])}</div>
 				<p class="fucc-muted fucc-small">Two-handed weapons take both hands. Items are added to the sheet and equipped as chosen here.</p>
 			</div>
@@ -792,6 +912,7 @@ export class CharacterCreator extends ApplicationV2 {
 			.join('');
 		const equipName = (k) => (k ? esc(this.cartItem(k)?.name) : '—');
 		const gear = s.cart.map((c) => esc(this.cartEntry(c)?.name)).join(', ');
+		const changes = this.edit ? this.#changesHtml() : '';
 		const notes = this.notes;
 		return `
 		<div class="fucc-review">
@@ -807,24 +928,96 @@ export class CharacterCreator extends ApplicationV2 {
 			</div>
 			<div class="fucc-review-cols">
 				<div><h3>Classes</h3><ul class="fucc-ul">${classes || '<li class="fucc-muted">None</li>'}</ul>${picks ? `<h3>Spells &amp; features</h3><ul class="fucc-ul">${picks}</ul>` : ''}${this.#extrasReview()}</div>
-				<div><h3>Equipment</h3><ul class="fucc-ul"><li><b>Main hand</b><div>${equipName(s.equip.mainHand)}</div></li><li><b>Off hand</b><div>${equipName(s.equip.offHand)}</div></li><li><b>Armor</b><div>${equipName(s.equip.armor)}</div></li><li><b>Accessory</b><div>${equipName(s.equip.accessory)}</div></li><li><b>Bought</b><div>${gear || '—'}</div></li><li><b>Zenit</b><div>${this.budget - this.spent} z left${game.settings.get(MODULE_ID, 'rollSavings') ? ' + 2d6 × 10 z savings (rolled on creation)' : ''}</div></li></ul>
+				<div><h3>Equipment</h3><ul class="fucc-ul"><li><b>Main hand</b><div>${equipName(s.equip.mainHand)}</div></li><li><b>Off hand</b><div>${equipName(s.equip.offHand)}</div></li><li><b>Armor</b><div>${equipName(s.equip.armor)}</div></li><li><b>Accessory</b><div>${equipName(s.equip.accessory)}</div></li><li><b>${this.edit ? 'Equipment' : 'Bought'}</b><div>${gear || '—'}</div></li><li><b>Zenit</b><div>${this.budget - this.spent} z left${!this.edit && game.settings.get(MODULE_ID, 'rollSavings') ? ' + 2d6 × 10 z savings (rolled on creation)' : ''}</div></li></ul>
 				${notes.length ? `<h3>Reminders</h3><ul class="fucc-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div>
 			</div>
-			${issues.length ? `<div class="fucc-issues"><h3>Before you can finish</h3><ul>${issues.map(([st, t]) => `<li><button type="button" class="fucc-link" data-action="step" data-step="${this.stepIndex(st)}">${esc(this.steps.find((x) => x[0] === st)?.[1] ?? st)}</button> ${esc(t)}</li>`).join('')}</ul></div>` : `<div class="fucc-ready"><i class="fa-solid fa-check"></i> Ready.${OPT.bonds() ? '' : ' Bonds are formed during play, so the sheet starts without any.'}</div>`}
+			${changes}
+			${issues.length ? `<div class="fucc-issues"><h3>Before you can finish</h3><ul>${issues.map(([st, t]) => `<li><button type="button" class="fucc-link" data-action="step" data-step="${this.stepIndex(st)}">${esc(this.steps.find((x) => x[0] === st)?.[1] ?? st)}</button> ${esc(t)}</li>`).join('')}</ul></div>` : `<div class="fucc-ready"><i class="fa-solid fa-check"></i> Ready.${this.edit ? this.#editNote() : OPT.bonds() ? '' : ' Bonds are formed during play, so the sheet starts without any.'}</div>`}
 		</div>`;
 	}
 
 	/* ---------------- optional rules ---------------- */
 
+	/**
+	 * What saving will do to an existing character: items to add, level changes and items to remove. Only items the
+	 * creator matched when it opened can be changed or removed.
+	 */
+	#plan() {
+		const s = this.s;
+		const a = this.target;
+		const cat = this.catalog;
+		const want = new Map(); // catalog uuid -> level (null for items without one)
+		for (const f of s.classes) want.set(this.classEntry(f).uuid, this.classLevel(f));
+		for (const [u, sl] of Object.entries(s.skills)) want.set(u, sl);
+		for (const g of this.grants) for (const u of s.picks[g.key] ?? []) want.set(u, null);
+		for (const f of this.autoFeatures) if (!want.has(f.uuid)) want.set(f.uuid, null);
+		const add = [];
+		const change = [];
+		const remove = [];
+		for (const [u, id] of this.owned) if (!want.has(u)) remove.push({ id, name: a.items.get(id)?.name ?? cat.byUuid.get(u)?.name ?? '?' });
+		for (const [u, level] of want) {
+			const e = cat.byUuid.get(u);
+			const id = this.owned.get(u);
+			if (!id) add.push({ uuid: u, name: e?.name ?? '?', level });
+			else if (level != null) {
+				const cur = Number(a.items.get(id)?.system?.level?.value) || 0;
+				if (cur !== level) change.push({ id, name: e?.name ?? '?', from: cur, to: level });
+			}
+		}
+		for (const id of this.ownedGear) if (!s.cart.some((c) => c.owned === id)) remove.push({ id, name: a.items.get(id)?.name ?? '?' });
+		for (const c of s.cart) if (!c.owned) add.push({ cart: c, name: this.cartEntry(c)?.name ?? '?' });
+		const has = this.has;
+		if (OPT.quirks() && !has.quirk && s.quirk.pick) add.push({ optional: 'quirk', name: `Quirk: ${s.quirk.name}` });
+		if (OPT.camp()) for (const n of s.camp.picks) add.push({ optional: 'camp', camp: n, name: `Camp Activity: ${n}` });
+		if (OPT.zero() && !has.zero && s.zero.effect) add.push({ optional: 'zero', name: `Zero Power: ${s.zero.name || ZERO_EFFECTS.find((x) => x.id === s.zero.effect)?.name || ''}` });
+		return { add, change, remove };
+	}
+
+	#changesHtml() {
+		const { add, change, remove } = this.#plan();
+		const s = this.s;
+		const a = this.target;
+		const rows = [];
+		const sys = a.system ?? {};
+		if (s.name.trim() !== a.name) rows.push(['edit', `Name: ${s.name.trim()}`]);
+		if (s.img !== a.img && !(s.img.includes('mystery-man') && a.img?.includes('mystery-man'))) rows.push(['edit', 'Portrait']);
+		for (const k of ['identity', 'theme', 'origin']) if (s[k].trim() !== (sys.resources?.[k]?.name ?? '')) rows.push(['edit', `${k[0].toUpperCase()}${k.slice(1)}: ${s[k].trim() || '—'}`]);
+		for (const [k, , abbr] of ATTRS) if (s.attrs[k] !== (Number(sys.attributes?.[k]?.base) || 8)) rows.push(['edit', `${abbr}: d${Number(sys.attributes?.[k]?.base) || 8} → d${s.attrs[k]}`]);
+		for (const c of change) rows.push(['edit', `${c.name}: level ${c.from} → ${c.to}`]);
+		for (const x of add) rows.push(['add', `Add ${x.name}${x.level != null && x.level > 1 ? ` (level ${x.level})` : ''}`]);
+		for (const x of remove) rows.push(['remove', `Remove ${x.name}`]);
+		if (this.spent) rows.push(['edit', `Zenit: ${this.budget} → ${this.budget - this.spent} z`]);
+		if (this.#equipChanged()) rows.push(['edit', 'Equipped items']);
+		const icon = { add: 'fa-plus', edit: 'fa-pen', remove: 'fa-trash' };
+		return `<div class="fucc-changes"><h3>Changes to the sheet</h3>${rows.length ? `<ul>${rows.map(([k, t]) => `<li class="is-${k}"><i class="fa-solid ${icon[k]}"></i> ${esc(t)}</li>`).join('')}</ul>` : '<p class="fucc-muted">Nothing changed yet.</p>'}</div>`;
+	}
+	#equipChanged() {
+		const eq = this.target.system?.equipped ?? {};
+		return Object.entries(this.s.equip).some(([slot, key]) => {
+			const now = key?.startsWith('o') ? key.slice(1) : key ? 'new' : null;
+			return (now ?? null) !== (eq[slot] || null);
+		});
+	}
+	#editNote() {
+		const unspent = this.levelCap - this.totalLevels;
+		const open = this.grants.filter((g) => (this.s.picks[g.key] ?? []).length < g.count).map((g) => g.label);
+		const bits = [];
+		if (unspent > 0) bits.push(`${unspent} level${unspent === 1 ? '' : 's'} left to spend on Skills.`);
+		if (open.length) bits.push(`Fewer picks than the Skills allow for ${open.join(', ')}.`);
+		return bits.length ? ` ${esc(bits.join(' '))}` : '';
+	}
+
 	#extraIssues() {
 		const s = this.s;
 		const out = [];
 		const add = (t) => out.push(['extras', t]);
-		if (OPT.bonds()) {
+		const has = this.has;
+		// when editing, nothing here is required: only what is being added has to be complete
+		if (OPT.bonds() && !this.edit) {
 			if (!s.bond.name.trim()) add('Starting Bond: name who or what the Bond is toward.');
 			if (!s.bond.feeling) add('Starting Bond: choose one feeling.');
 		}
-		if (OPT.quirks()) {
+		if (OPT.quirks() && !has.quirk && (!this.edit || s.quirk.pick)) {
 			if (!systemSupports('quirk')) add("GM: turn on Quirks in Project FU's Optional Rules settings, or turn off the creator's Quirks option.");
 			if (!s.quirk.pick) add('Quirk: choose one, or write your own.');
 			else {
@@ -834,11 +1027,11 @@ export class CharacterCreator extends ApplicationV2 {
 				if (who) add(`Quirk: ${s.quirk.name} is already taken by ${who}. No two characters may share a Quirk.`);
 			}
 		}
-		if (OPT.camp()) {
+		if (OPT.camp() && (!this.edit || s.camp.picks.length)) {
 			if (!systemSupports('campActivity')) add("GM: turn on Camp Activities in Project FU's Optional Rules settings, or turn off the creator's Camp Activities option.");
-			if (s.camp.picks.length !== CAMP_PICKS) add(`Camp Activities: choose ${CAMP_PICKS} (${s.camp.picks.length} chosen).`);
+			if (!this.edit && s.camp.picks.length !== CAMP_PICKS) add(`Camp Activities: choose ${CAMP_PICKS} (${s.camp.picks.length} chosen).`);
 		}
-		if (OPT.zero()) {
+		if (OPT.zero() && !has.zero && (!this.edit || s.zero.trigger || s.zero.effect)) {
 			const z = s.zero;
 			if (!systemSupports('zeroPower')) add("GM: turn on Zero Powers in Project FU's Optional Rules settings, or turn off the creator's Zero Powers option.");
 			if (!OPT.awakened() && !z.trigger) add('Zero Power: choose a trigger.');
@@ -857,13 +1050,16 @@ export class CharacterCreator extends ApplicationV2 {
 	#extrasHtml() {
 		const s = this.s;
 		const blocks = [];
-		if (OPT.bonds()) {
+		const has = this.has;
+		const onSheet = (title, what) => `<section class="fucc-grant"><header><h3>${title}</h3><span class="fucc-count is-ok">on the sheet</span></header><p class="fucc-muted fucc-small">${esc(this.target?.name ?? '')} already has ${what}. Change it on the character sheet.</p></section>`;
+		if (OPT.bonds() && !this.edit) {
 			blocks.push(`<section class="fucc-grant"><header><h3>Starting Bond</h3></header>
 				<p class="fucc-muted fucc-small">You begin play with one Bond holding a single feeling. Core Rulebook p.220.</p>
 				<div class="fucc-row2 fucc-form"><label>Toward<input type="text" name="opt.bond.name" value="${esc(s.bond.name)}" placeholder="My mentor, the Empire, Mira…"></label>
 				<label>Feeling<select name="opt.bond.feeling"><option value="">—</option>${BOND_FEELINGS.map(([, f]) => `<option ${s.bond.feeling === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label></div></section>`);
 		}
-		if (OPT.quirks()) {
+		if (OPT.quirks() && has.quirk) blocks.push(onSheet('Quirk', `the Quirk <b>${esc(has.quirk.name)}</b>`));
+		else if (OPT.quirks()) {
 			const q = s.quirk;
 			const opts = QUIRKS.map((x) => {
 				const on = q.pick === x.name;
@@ -881,20 +1077,25 @@ export class CharacterCreator extends ApplicationV2 {
 		}
 		if (OPT.camp()) {
 			const c = s.camp;
+			const owned = (n) => has.camp.some((x) => x.toLowerCase() === n.toLowerCase());
+			const room = CAMP_PICKS - has.camp.length;
 			const opts = CAMP_ACTIVITIES.map((a) => {
-				const on = c.picks.includes(a.name);
-				const full = !on && c.picks.length >= CAMP_PICKS;
+				const mine = owned(a.name);
+				const on = mine || c.picks.includes(a.name);
+				const full = mine || (!on && c.picks.length >= room);
 				const who = this.taken.camp.get(a.name.toLowerCase());
-				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="toggleCamp" data-name="${esc(a.name)}" aria-pressed="${on}" ${full ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${esc(a.name)}</b><span class="fucc-muted fucc-small">${esc(a.target)} · p.${a.page}${who ? ` · <span class="fucc-warn">also taken by ${esc(who)}</span>` : ''}</span></div></div><div class="fucc-small fucc-opt-sum">${esc(a.summary)}</div></div>`;
+				return `<div class="fucc-opt ${on ? 'is-on' : ''}"><div class="fucc-opt-row"><button type="button" class="fucc-check" data-action="toggleCamp" data-name="${esc(a.name)}" aria-pressed="${on}" ${full ? 'disabled' : ''}>${on ? '<i class="fa-solid fa-check"></i>' : ''}</button><div class="fucc-txt"><b>${esc(a.name)}</b><span class="fucc-muted fucc-small">${esc(a.target)} · p.${a.page}${mine ? ' · on the sheet' : ''}${who ? ` · <span class="fucc-warn">also taken by ${esc(who)}</span>` : ''}</span></div></div><div class="fucc-small fucc-opt-sum">${esc(a.summary)}</div></div>`;
 			}).join('');
 			const texts = c.picks
 				.map((n) => `<label>${esc(n)} <span class="fucc-hint">Edit to match the book's wording if you like.</span><textarea name="opt.camp.${esc(n)}" rows="3">${esc(c.text[n] ?? '')}</textarea></label>`)
 				.join('');
-			blocks.push(`<section class="fucc-grant"><header><h3>Camp Activities</h3><span class="fucc-count ${c.picks.length === CAMP_PICKS ? 'is-ok' : ''}">${c.picks.length} / ${CAMP_PICKS}</span></header>
+			const n = has.camp.length + c.picks.length;
+			blocks.push(`<section class="fucc-grant"><header><h3>Camp Activities</h3><span class="fucc-count ${n >= CAMP_PICKS ? 'is-ok' : ''}">${n} / ${CAMP_PICKS}</span></header>
 				<p class="fucc-muted fucc-small">During a resting scene, perform one of your two activities. Try not to double up with the rest of the group. Natural Fantasy Atlas p.130.</p>
 				<div class="fucc-optlist fucc-optlist-plain">${opts}</div>${texts ? `<div class="fucc-form fucc-textblock">${texts}</div>` : ''}</section>`);
 		}
-		if (OPT.zero()) {
+		if (OPT.zero() && has.zero) blocks.push(onSheet('Zero Power', `the Zero Power <b>${esc(has.zero.name)}</b>`));
+		else if (OPT.zero()) {
 			const z = s.zero;
 			const awakened = OPT.awakened();
 			const trig = ZERO_TRIGGERS.find((t) => t.id === z.trigger);
@@ -965,15 +1166,17 @@ export class CharacterCreator extends ApplicationV2 {
 	#extrasReview() {
 		const s = this.s;
 		const rows = [];
-		if (OPT.bonds()) rows.push(`<li><b>Starting Bond</b><div>${esc(s.bond.name || '—')}${s.bond.feeling ? ` (${esc(s.bond.feeling)})` : ''}</div></li>`);
-		if (OPT.quirks()) rows.push(`<li><b>Quirk</b><div>${esc(s.quirk.name || '—')}</div></li>`);
-		if (OPT.camp()) rows.push(`<li><b>Camp Activities</b><div>${esc(s.camp.picks.join(', ') || '—')}</div></li>`);
-		if (OPT.zero()) {
+		const has = this.has;
+		if (OPT.bonds() && !this.edit) rows.push(`<li><b>Starting Bond</b><div>${esc(s.bond.name || '—')}${s.bond.feeling ? ` (${esc(s.bond.feeling)})` : ''}</div></li>`);
+		if (OPT.quirks()) rows.push(`<li><b>Quirk</b><div>${esc(has.quirk?.name || s.quirk.name || '—')}</div></li>`);
+		if (OPT.camp()) rows.push(`<li><b>Camp Activities</b><div>${esc([...has.camp, ...s.camp.picks].join(', ') || '—')}</div></li>`);
+		if (OPT.zero() && has.zero) rows.push(`<li><b>Zero Power</b><div>${esc(has.zero.name)}</div></li>`);
+		else if (OPT.zero()) {
 			const t = ZERO_TRIGGERS.find((x) => x.id === s.zero.trigger)?.name ?? (OPT.awakened() ? 'awakens in play' : '—');
 			const e = ZERO_EFFECTS.find((x) => x.id === s.zero.effect)?.name ?? '—';
 			rows.push(`<li><b>Zero Power</b><div>${esc(s.zero.name || e)}: ${esc(t)} → ${esc(e)}</div></li>`);
 		}
-		if (OPT.higherHp()) rows.push('<li><b>Higher HP</b><div>+10 maximum HP</div></li>');
+		if (OPT.higherHp() && !this.edit) rows.push('<li><b>Higher HP</b><div>+10 maximum HP</div></li>');
 		return rows.length ? `<h3>Optional rules</h3><ul class="fucc-ul">${rows.join('')}</ul>` : '';
 	}
 
@@ -992,7 +1195,7 @@ export class CharacterCreator extends ApplicationV2 {
 		const c = this.s.camp;
 		const n = t.dataset.name;
 		if (c.picks.includes(n)) c.picks = c.picks.filter((x) => x !== n);
-		else if (c.picks.length < CAMP_PICKS) {
+		else if (c.picks.length < CAMP_PICKS - this.has.camp.length && !this.has.camp.includes(n)) {
 			c.picks.push(n);
 			c.text[n] ??= CAMP_ACTIVITIES.find((a) => a.name === n)?.summary ?? '';
 		}
@@ -1077,8 +1280,9 @@ export class CharacterCreator extends ApplicationV2 {
 		if (s.classes.includes(f)) {
 			s.classes = s.classes.filter((x) => x !== f);
 			for (const sk of this.catalog.skillsOf(f)) delete s.skills[sk.uuid];
+			delete this.classExtra[f];
 			this.#prunePicks();
-		} else if (s.classes.length < MAX_CLASSES) {
+		} else if (this.edit || s.classes.length < MAX_CLASSES) {
 			s.classes.push(f);
 			// give the new class its first level automatically when there is room and a single obvious Skill
 		}
@@ -1094,7 +1298,7 @@ export class CharacterCreator extends ApplicationV2 {
 	static #onSkillPlus(ev, t) {
 		const sk = this.catalog.byUuid.get(t.dataset.uuid);
 		const cur = this.s.skills[sk.uuid] ?? 0;
-		if (cur < (sk.sys.level?.max ?? 1) && this.totalLevels < START_LEVEL) this.s.skills[sk.uuid] = cur + 1;
+		if (cur < (sk.sys.level?.max ?? 1) && this.totalLevels < this.levelCap && this.classRoom(sk)) this.s.skills[sk.uuid] = cur + 1;
 		this.render();
 	}
 	static #onSkillMinus(ev, t) {
@@ -1164,17 +1368,29 @@ export class CharacterCreator extends ApplicationV2 {
 	}
 	static async #onCreate() {
 		if (this.busy || this.issues().length) return;
+		if (this.edit) {
+			const { remove } = this.#plan();
+			if (remove.length) {
+				const ok = await foundry.applications.api.DialogV2.confirm({
+					window: { title: `Remove from ${this.target.name}?` },
+					content: `<p>Saving takes these off the sheet:</p><ul>${remove.map((r) => `<li>${esc(r.name)}</li>`).join('')}</ul>`,
+					rejectClose: false,
+				});
+				if (!ok) return;
+			}
+		}
 		this.busy = true;
 		this.render();
 		try {
-			const actor = await this.#build();
-			ui.notifications.info(`${actor.name} is ready.`);
+			const actor = this.edit ? await this.#apply() : await this.#build();
+			ui.notifications.info(this.edit ? `Saved the changes to ${actor.name}.` : `${actor.name} is ready.`);
 			actor.sheet?.render(true);
 			this.close();
 		} catch (err) {
 			console.error(`${MODULE_ID} |`, err);
 			const perm = /permission|lacks/i.test(String(err?.message));
-			ui.notifications.error(perm ? 'You do not have permission to create actors. Ask your GM to make a blank character for you, then open the creator from its sheet.' : `Character creation failed: ${err?.message ?? err}`);
+			if (this.edit) ui.notifications.error(`Saving failed: ${err?.message ?? err}`);
+			else ui.notifications.error(perm ? 'You do not have permission to create actors. Ask your GM to make a blank character for you, then open the creator from its sheet.' : `Character creation failed: ${err?.message ?? err}`);
 			this.busy = false;
 			this.render();
 		}
@@ -1348,6 +1564,76 @@ export class CharacterCreator extends ApplicationV2 {
 		// --- start at full resources (max values are computed from the items just added)
 		const r = actor.system.resources;
 		await actor.update({ 'system.resources.hp.value': r.hp.max, 'system.resources.mp.value': r.mp.max, 'system.resources.ip.value': r.ip.max });
+		return actor;
+	}
+
+	/** Save an edit: apply the plan to the existing character. HP, MP, Fabula Points, EXP and the advancement log are left as they are. */
+	async #apply() {
+		const s = this.s;
+		const actor = this.target;
+		const { add, change, remove } = this.#plan();
+		const fromPack = async (uuid) => {
+			const doc = await fromUuid(uuid);
+			if (!doc) throw new Error(`Could not load ${uuid}`);
+			const data = game.items.fromCompendium(doc, { keepId: false });
+			delete data.folder;
+			return data;
+		};
+
+		// items to add, each tagged so new equipment can be found again for the equipment slots
+		const runTag = foundry.utils.randomID(6);
+		const created = [];
+		const cartTag = new Map();
+		for (const [i, x] of add.entries()) {
+			let d;
+			if (x.uuid) {
+				d = await fromPack(x.uuid);
+				if (x.level != null) foundry.utils.setProperty(d, 'system.level.value', x.level);
+			} else if (x.cart) {
+				d = x.cart.custom ? customWeaponItem(x.cart.custom) : await fromPack(x.cart.uuid);
+				cartTag.set(x.cart.key, `${runTag}-${i}`);
+			} else if (x.optional === 'quirk') {
+				const q = QUIRKS.find((y) => y.name === s.quirk.pick);
+				d = quirkItem({ name: s.quirk.name, text: s.quirk.text, ref: q ? pagesText(q.pages) : 'Custom Quirk' });
+			} else if (x.optional === 'camp') {
+				const a = CAMP_ACTIVITIES.find((y) => y.name === x.camp);
+				d = campItem({ ...a, text: s.camp.text[x.camp] ?? a.summary });
+			} else if (x.optional === 'zero') d = zeroItem(s.zero, OPT.awakened());
+			if (!d) continue;
+			foundry.utils.setProperty(d, `flags.${MODULE_ID}.tag`, `${runTag}-${i}`);
+			created.push(d);
+		}
+
+		if (remove.length) await actor.deleteEmbeddedDocuments('Item', [...new Set(remove.map((r) => r.id))]);
+		if (change.length) await actor.updateEmbeddedDocuments('Item', change.map((c) => ({ _id: c.id, 'system.level.value': c.to })));
+		const made = created.length ? await actor.createEmbeddedDocuments('Item', created) : [];
+		const byTag = new Map();
+		for (const doc of [...made, ...actor.items]) {
+			const tag = doc?.getFlag?.(MODULE_ID, 'tag');
+			if (tag && !byTag.has(tag)) byTag.set(tag, doc.id);
+		}
+
+		const equipped = {};
+		for (const [slot, key] of Object.entries(s.equip)) {
+			if (!key) equipped[slot] = null;
+			else if (key.startsWith('o')) equipped[slot] = actor.items.has(key.slice(1)) ? key.slice(1) : null;
+			else equipped[slot] = byTag.get(cartTag.get(key)) ?? null;
+		}
+
+		const update = {
+			name: s.name.trim(),
+			img: s.img,
+			'prototypeToken.name': s.name.trim(),
+			'system.resources.identity.name': s.identity.trim(),
+			'system.resources.theme.name': s.theme.trim(),
+			'system.resources.origin.name': s.origin.trim(),
+			'system.resources.zenit.value': Math.max(0, this.budget - this.spent),
+			'system.equipped': equipped,
+		};
+		for (const [k] of ATTRS) update[`system.attributes.${k}.base`] = s.attrs[k];
+		// a sheet whose level was behind its classes catches up; an unspent level is never taken away
+		if (this.totalLevels > (Number(actor.system.level?.value) || 0)) update['system.level.value'] = this.totalLevels;
+		await actor.update(update);
 		return actor;
 	}
 }

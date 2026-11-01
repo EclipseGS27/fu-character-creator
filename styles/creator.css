@@ -829,6 +829,36 @@
 	color: var(--fucc-good);
 }
 
+.fucc .fucc-changes {
+	border: 1px solid var(--fucc-line);
+	border-radius: 8px;
+	padding: 10px 14px;
+	background: var(--fucc-panel);
+}
+.fucc .fucc-changes ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 4px 16px;
+	font-size: 13px;
+}
+.fucc .fucc-changes li i {
+	width: 16px;
+	text-align: center;
+	margin-right: 4px;
+}
+.fucc .fucc-changes .is-add i {
+	color: var(--fucc-good);
+}
+.fucc .fucc-changes .is-edit i {
+	color: var(--fucc-accent);
+}
+.fucc .fucc-changes .is-remove {
+	color: var(--fucc-bad);
+}
+
 /* sidebar button */
 #actors .fucc-open,
 .actors-sidebar .fucc-open {

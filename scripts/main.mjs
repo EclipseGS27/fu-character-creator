@@ -1,7 +1,10 @@
 import { MODULE_ID } from './rules.mjs';
 import { CharacterCreator, getCatalog } from './creator.mjs';
 
-/** Open the creator. Pass an existing (empty) character to fill it in instead of creating a new actor. */
+/**
+ * Open the creator. Pass an empty character to fill it in instead of creating a new actor, or a finished one to
+ * edit it: add classes, Skill Levels, spells and equipment, or change what the creator put there.
+ */
 function open(actor = null) {
 	if (game.system.id !== 'projectfu') {
 		ui.notifications.warn('The Character Creator only works with the Project FU (Fabula Ultima) system.');
@@ -9,10 +12,6 @@ function open(actor = null) {
 	}
 	if (actor && actor.type !== 'character') {
 		ui.notifications.warn('The Character Creator can only fill in character actors.');
-		return null;
-	}
-	if (actor && actor.items.some((i) => i.type === 'class')) {
-		ui.notifications.warn(`${actor.name} already has classes. Create a new character instead, or remove the classes first.`);
 		return null;
 	}
 	const app = new CharacterCreator({ actor });
@@ -111,14 +110,14 @@ Hooks.on('renderActorDirectory', (app, html) => {
 	if (bar) bar.append(btn);
 });
 
-// Header control on empty character sheets
+// Header control on character sheets: fill in an empty character, or edit a finished one
 Hooks.on('getHeaderControlsApplicationV2', (app, controls) => {
 	const actor = app.document ?? app.actor;
 	if (!(actor instanceof Actor) || actor.type !== 'character' || !actor.isOwner || !allowed()) return;
-	if (actor.items.some((i) => i.type === 'class')) return;
 	if (controls.some((c) => c.action === 'fuccOpen')) return;
 	const handler = () => open(actor);
-	controls.unshift({ action: 'fuccOpen', icon: 'fa-solid fa-hat-wizard', label: 'Character Creator', onClick: handler });
+	const built = actor.items.some((i) => i.type === 'class');
+	controls.unshift({ action: 'fuccOpen', icon: 'fa-solid fa-hat-wizard', label: built ? 'Edit in Character Creator' : 'Character Creator', onClick: handler });
 	try {
 		if (app.options?.actions && !app.options.actions.fuccOpen) app.options.actions.fuccOpen = handler;
 	} catch {
