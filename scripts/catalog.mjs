@@ -29,7 +29,7 @@ const FIELDS = [
 	'system.description',
 ];
 
-const slug = (s) =>
+export const slug = (s) =>
 	String(s ?? '')
 		.toLowerCase()
 		.normalize('NFKD')
@@ -111,6 +111,8 @@ export async function loadCatalog() {
 		features,
 		equipment,
 		byUuid: new Map(all.map((e) => [e.uuid, e])),
+		/** `type|fuid`, the key an actor's own items are matched back to the catalog with */
+		byKey: new Map(all.map((e) => [`${e.type}|${e.fuid}`, e])),
 		skillsOf: (classFuid) => skills.filter((s) => s.sys.class?.value === classFuid),
 		spellsOf: (classFuid) => legal.filter((s) => s.sys.class?.value === classFuid),
 		featuresOf: (types) => features.filter((f) => types.includes(f.sys.featureType)),
