@@ -272,7 +272,7 @@ export function quirkItem(q) {
 			summary: { value: '' },
 			fuid: q.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
 			source: q.source ?? '',
-			data: { description: para(q.text) + (q.ref ? `<p><i>${q.ref}</i></p>` : ''), hasClock: { value: false }, hasResource: { value: false } },
+			data: { type: 'projectfu.quirk', description: para(q.text) + (q.ref ? `<p><i>${q.ref}</i></p>` : ''), hasClock: { value: false }, hasResource: { value: false } },
 		},
 	};
 }
@@ -282,7 +282,7 @@ export function campItem(c) {
 		name: c.name,
 		type: 'optionalFeature',
 		img: 'icons/svg/fire.svg',
-		system: { optionalType: 'projectfu.campActivity', summary: { value: `Target: ${c.target}` }, fuid: c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), source: `FUNF${c.page}`, data: { description: para(c.text) + `<p><i>Target: ${c.target}. Natural Fantasy Atlas p.${c.page}.</i></p>` } },
+		system: { optionalType: 'projectfu.campActivity', summary: { value: `Target: ${c.target}` }, fuid: c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), source: `FUNF${c.page}`, data: { type: 'projectfu.campActivity', description: para(c.text) + `<p><i>Target: ${c.target}. Natural Fantasy Atlas p.${c.page}.</i></p>` } },
 	};
 }
 
@@ -304,6 +304,7 @@ export function zeroItem(z, awakened) {
 			fuid: 'zero-power',
 			source: 'FUHF124',
 			data: {
+				type: 'projectfu.zeroPower',
 				zeroTrigger: { value: trig?.name ?? (awakened ? 'Not yet awakened' : ''), description: trig ? para(trigText) : '<p>Chosen when the power awakens (Awakened Power, High Fantasy Atlas p.130).</p>' },
 				zeroEffect: { value: eff?.name ?? '', description: para(effText) + ZERO_RULES },
 				hasClock: { value: true },
@@ -319,7 +320,7 @@ export function takenInWorld(exclude) {
 	for (const a of game.actors?.filter?.((x) => x.type === 'character' && x !== exclude) ?? []) {
 		for (const i of a.items) {
 			if (i.type !== 'optionalFeature') continue;
-			const t = i.system?.optionalType;
+			const t = (i.system?.data?.type ?? i.system?.optionalType);
 			if (t === 'projectfu.quirk') out.quirk.set(i.name.toLowerCase(), a.name);
 			if (t === 'projectfu.campActivity') out.camp.set(i.name.toLowerCase(), a.name);
 			if (t === 'projectfu.zeroPower') {
