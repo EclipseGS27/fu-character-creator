@@ -320,7 +320,7 @@ export function takenInWorld(exclude) {
 	for (const a of game.actors?.filter?.((x) => x.type === 'character' && x !== exclude) ?? []) {
 		for (const i of a.items) {
 			if (i.type !== 'optionalFeature') continue;
-			const t = (i.system?.data?.type ?? i.system?.optionalType);
+			const t = (i.system?.optionalType ?? i.system?.data?.type);
 			if (t === 'projectfu.quirk') out.quirk.set(i.name.toLowerCase(), a.name);
 			if (t === 'projectfu.campActivity') out.camp.set(i.name.toLowerCase(), a.name);
 			if (t === 'projectfu.zeroPower') {

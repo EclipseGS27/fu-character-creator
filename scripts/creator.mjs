@@ -435,7 +435,7 @@ export class CharacterCreator extends ApplicationV2 {
 		}
 
 		// optional rules already on the sheet
-		const opt = (t) => items.filter((i) => i.type === 'optionalFeature' && (i.system?.data?.type ?? i.system?.optionalType) === t);
+		const opt = (t) => items.filter((i) => i.type === 'optionalFeature' && (i.system?.optionalType ?? i.system?.data?.type) === t);
 		this.has = { quirk: opt('projectfu.quirk')[0] ?? null, camp: opt('projectfu.campActivity').map((i) => i.name), zero: opt('projectfu.zeroPower')[0] ?? null };
 		this.loadedTotal = this.totalLevels;
 	}
